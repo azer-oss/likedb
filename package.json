@@ -1,0 +1,15 @@
+{
+  "name": "likedb",
+  "main": "index.js",
+  "scripts": {
+    "test": "budo test.js"
+  },
+  "dependencies": {
+    "db": "kaktus/db",
+    "indexeddb": "github:azer/indexeddb"
+  },
+  "devDependencies": {
+    "budo": "^10.0.4",
+    "relative-date": "azer/relative-date"
+  }
+}

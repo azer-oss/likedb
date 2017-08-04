@@ -1,0 +1,132 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font: 16px "Open Sans";
+  color: #222;
+  line-height: 30px;
+}
+
+.push, .post {
+  float: left;
+  width: calc(50% - 40px);
+  padding: 20px;
+  color: #666;
+  text-align: center;
+}
+
+.push label, .post label {
+  color: #333;
+}
+
+.left {
+  float: left;
+  width: 60%;
+  margin: 0;
+  padding: 0;
+  background: #aeffc7;
+  position: relative;
+  overflow: hidden;
+}
+
+.right {
+  float: right;
+  width: 40%;
+  margin: 0;
+  padding: 0;
+  background: #FFB3D1;
+}
+
+.left, .right {
+  height: calc(100% - 70px);
+}
+
+h1 {
+  text-align: center;
+  font: 500 21px "Open Sans";
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.7);
+  border-bottom: 3px solid rgba(255, 255, 255, 0.5);
+  padding-bottom: 10px;
+  width: 70%;
+  margin: 20px auto;
+}
+
+.likes, .queued {
+  padding: 20px;
+}
+
+.likes {
+  overflow-y: scroll;
+  height: calc(100% - 195px);
+}
+
+.row {
+  padding-left: 35px;
+  position: relative;
+}
+
+.row .title {
+  float: left;
+  width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row .ts {
+  width: 35%;
+  float: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.clear {
+  clear: both;
+}
+
+.row img {
+  position: absolute;
+  margin: 5px 0 0 -30px;
+  opacity: 0.8;
+  width: 20px;
+  cursor: pointer;
+}
+
+.row img.delete {
+  width: 10px;
+  opacity: 0.5;
+  margin: 10px 0 0 -21px;
+}
+
+.form {
+  position: absolute;
+  bottom: 0px;
+  text-align: center;
+  width: 100%;
+  padding: 20px 0;
+  background: #68d9a6;
+}
+
+.form input {
+  width: 50%;
+  border: 0;
+  padding: 10px;
+  color: #222;
+  font: 14px "Open Sans";
+  border: 0;
+}
+
+.form button {
+  padding: 10px;
+  border: 0;
+  background: #fff;
+  color: #333;
+  font: 600 14px "Open Sans";
+  cursor: pointer;
+}
