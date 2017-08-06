@@ -14,7 +14,7 @@ Initialize:
 
 ```js
 require("likedb")({
-  host: 'http://localhost:9000',
+  host: '',
   token: '',
   postIntervalSecs: 1.5, // Post updates -if there are any- every 1.5 seconds
   pushIntervalSecs: 60, // Check for updates every 60 seconds
