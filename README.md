@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-$ npm install kozmos/likedb
+$ yarn add kozmos/likedb
 ```
 
 ## Usage
