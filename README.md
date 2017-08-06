@@ -1,6 +1,6 @@
 ## likedb
 
-[Kozmos](https://getkozmos.com)' client-side database for keeping bookmarks offline in the browser using [indexeddb](https://github.com/azer/indexeddb). It periodically syncs with Kozmos servers.
+[Kozmos](https://getkozmos.com)' client-side database for keeping bookmarks offline in the browser using [indexeddb](https://github.com/azer/indexeddb). It syncs with Kozmos servers when user is online. 
 
 ## Install
 
