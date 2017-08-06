@@ -10,6 +10,19 @@ $ yarn add kozmos/likedb
 
 ## Usage
 
+Initialize:
+
+```js
+require("likedb")({
+  host: 'http://localhost:9000',
+  token: '',
+  postIntervalSecs: 1.5, // Post updates -if there are any- every 1.5 seconds
+  pushIntervalSecs: 60, // Check for updates every 60 seconds
+  onPostUpdates: () => console.info('Kozmos just posted some updates to server'),
+  onReceiveUpdates: () => console.info('Kozmos just received some updates from server')
+})
+```
+
 Add a page to likes:
 
 ```js
