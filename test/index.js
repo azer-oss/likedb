@@ -1,8 +1,8 @@
 const relativeDate = require("relative-date")
 const stores = require("../lib/stores")
 const likedb = require("../")({
-  host: 'http://localhost:9000',
-  token: 'wkbb4njqbkk6uxo301icxz9k9myfgn31nx2n8nwz28qwqusght',
+  host: '',
+  token: '',
   postIntervalSecs: 1.5,
   onPostUpdates: (updates) => console.info('> > > posted updates', updates),
   onReceiveUpdates: (updates) => console.log('< < < received updates', updates.content.length)
