@@ -2,7 +2,7 @@
   "name": "likedb",
   "main": "index.js",
   "scripts": {
-    "test": "budo test.js"
+    "test": "cd test && ../node_modules/.bin/budo index.js"
   },
   "dependencies": {
     "db": "kaktus/db",
@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "budo": "^10.0.4",
-    "relative-date": "azer/relative-date"
+    "prova": "github:azer/prova",
+    "relative-date": "github:azer/relative-date"
   }
 }
