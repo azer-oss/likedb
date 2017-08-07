@@ -1,7 +1,6 @@
 const Servers = require("./lib/servers")
-const stores = require("./lib/stores")
 const IndexedDBPull = require("./lib/indexeddb-pull")
-
+const stores = require("./lib/stores")
 
 module.exports = options => {
   stores.servers = new Servers(options)
