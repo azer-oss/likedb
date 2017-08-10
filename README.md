@@ -13,7 +13,9 @@ $ yarn add kozmos/likedb
 Initialize:
 
 ```js
-require("likedb")({
+import likedb from 'likedb'
+
+const db = likedb({
   host: '',
   token: '',
   postIntervalSecs: 1.5, // Post updates -if there are any- every 1.5 seconds
@@ -26,7 +28,6 @@ require("likedb")({
 Add a page to likes:
 
 ```js
-import db from 'likedb'
 
 db.likes.like('github.com', err => console.error(err))
 ```
