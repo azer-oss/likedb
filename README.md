@@ -1,6 +1,6 @@
 ## likedb
 
-[Kozmos](https://getkozmos.com)' client-side database for keeping bookmarks offline in the browser using [indexeddb](https://github.com/azer/indexeddb). It syncs with Kozmos servers when user is online. 
+[Kozmos](https://getkozmos.com)' client-side database for keeping bookmarks offline in the browser using [indexeddb](https://github.com/azer/indexeddb). It syncs with Kozmos servers when user is online.
 
 ## Install
 
@@ -22,6 +22,7 @@ const db = likedb({
   pushIntervalSecs: 60, // Check for updates every 60 seconds
   onPostUpdates: () => console.info('Kozmos just posted some updates to server'),
   onReceiveUpdates: () => console.info('Kozmos just received some updates from server')
+  onError: (error, action) => console.info('Failed during %s: %s', error.action, error)
 })
 ```
 
