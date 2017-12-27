@@ -51,6 +51,8 @@ db.likes.get('github.com', (error, doc) => {
 })
 ```
 
+
+
 ## Relation with Kaktüs
 
 This library is based on [Kaktüs Web Browser's database library](https://github.com/kaktus/db). Although it only stores bookmarks,
