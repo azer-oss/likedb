@@ -10,14 +10,15 @@ $ yarn add kozmos/likedb
 
 ## Usage
 
-Initialize:
+Initialize using your personal [API key & secret](https://getkozmos.com/settings/account):
 
 ```js
 import likedb from 'likedb'
 
 const db = likedb({
+  apiKey: '',
+  apiSecret: '',
   host: '',
-  token: '',
   postIntervalSecs: 1.5, // Post updates -if there are any- every 1.5 seconds
   pushIntervalSecs: 60, // Check for updates every 60 seconds
   onPostUpdates: () => console.info('Kozmos just posted some updates to server'),
@@ -50,8 +51,6 @@ db.likes.get('github.com', (error, doc) => {
   // => undefined
 })
 ```
-
-
 
 ## Relation with Kaktüs
 
