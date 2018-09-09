@@ -1,5 +1,4 @@
-const anglicize = require("anglicize")
-const sanitizeUrl = require("urls").clean
+const sanitize = require("./lib/sanitize")
 const getStore = require("./lib/store")
 
 const DEFAULT_OFFSET = 0
@@ -12,15 +11,15 @@ class LikeDB {
   }
 
   add({ url, title, tags, createdAt }) {
-    return this.store.add({
-      url,
-      title: title || "",
-      tags: tags || [],
-      cleanUrl: sanitizeUrl(url),
-      cleanTitle: sanitizeTitle(title),
-      createdAt: createdAt || Date.now(),
-      updatedAt: Date.now()
-    })
+    return this.store.add(
+      sanitize({
+        url,
+        title: title || "",
+        tags: tags || [],
+        createdAt: createdAt || Date.now(),
+        updatedAt: Date.now()
+      })
+    )
   }
 
   count() {
@@ -120,9 +119,8 @@ class LikeDB {
   updateTitle(url, title) {
     return this.store.get(url).then(row => {
       row.title = title
-      row.cleanTitle = sanitizeTitle(title)
       row.updatedAt = Date.now()
-      return this.store.update(row)
+      return this.store.update(sanitize(row))
     })
   }
 
@@ -161,9 +159,4 @@ function sortByCreatedAt(a, b) {
   }
 
   return 0
-}
-
-function sanitizeTitle(title) {
-  if (!title) return ""
-  return anglicize(title.trim().toLowerCase())
 }
