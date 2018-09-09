@@ -7,8 +7,8 @@ const DEFAULT_LIMIT = 10
 
 class LikeDB {
   constructor(options) {
-    this.options = options
-    this.store = getStore(options)
+    this.options = options || {}
+    this.store = getStore(this.options)
   }
 
   add({ url, title, tags, createdAt }) {
@@ -105,9 +105,9 @@ class LikeDB {
 
   untag(url, tag) {
     return this.store.get(url).then(row => {
-      const index = row.tags.indexOf(tag)
+      const index = row.tags ? row.tags.indexOf(tag) : -1
 
-      if (index == -1) {
+      if (index === -1) {
         throw new Error("Tag doesn't exist")
       }
 
@@ -128,6 +128,12 @@ class LikeDB {
 
   tag(url, tag) {
     return this.store.get(url).then(row => {
+      if (!row.tags) {
+        row.tags = [tag]
+        row.updatedAt = Date.now()
+        return this.store.update(row)
+      }
+
       if (row.tags.indexOf(tag) > -1) {
         throw new Error("Tag already added")
       }
