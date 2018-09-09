@@ -53,6 +53,14 @@ Delete a bookmark by URL:
 await likedb.delete("https://en.wikipedia.org")
 ```
 
+### `.get` 
+
+Get a bookmark by URL:
+
+```js
+const bookmark = await likedb.get("https://en.wikipedia.org")
+```
+
 ### `.listByTag`
 
 ```js
