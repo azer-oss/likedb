@@ -2,11 +2,12 @@
   "name": "likedb",
   "main": "index.js",
   "scripts": {
-    "test": "cd test && ../node_modules/.bin/budo index.js"
+    "example-app": "cd example-app && ../node_modules/.bin/budo index.js"
   },
   "dependencies": {
-    "db": "kaktus/db",
-    "indexeddb": "github:azer/indexeddb"
+    "anglicize": "github:azer/anglicize",
+    "indexeddb": "github:azer/indexeddb",
+    "urls": "github:kaktus/urls"
   },
   "devDependencies": {
     "budo": "^10.0.4",

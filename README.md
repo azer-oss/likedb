@@ -1,6 +1,7 @@
+
 ## likedb
 
-[Kozmos](https://getkozmos.com)' client-side database for keeping bookmarks offline in the browser using [indexeddb](https://github.com/azer/indexeddb). It syncs with Kozmos servers when user is online.
+Offline bookmarking database with auto-sync to [Kozmos](https://kozmos.cool).
 
 ## Install
 
@@ -8,51 +9,94 @@
 $ yarn add kozmos/likedb
 ```
 
-## Usage
+## Manual
 
-Initialize using your personal [API key & secret](https://getkozmos.com/settings/account):
+Initialize a new database and hook it with Kozmos to get it synced automatically;
 
 ```js
-import likedb from 'likedb'
+import LikeDB from 'likedb'
+import syncWithKozmos from 'likedb/lib/kozmos'
 
-const db = likedb({
-  apiKey: '',
-  apiSecret: '',
-  host: '',
-  postIntervalSecs: 1.5, // Post updates -if there are any- every 1.5 seconds
-  pushIntervalSecs: 60, // Check for updates every 60 seconds
-  onPostUpdates: () => console.info('Kozmos just posted some updates to server'),
-  onReceiveUpdates: () => console.info('Kozmos just received some updates from server')
-  onError: (error, action) => console.info('Failed during %s: %s', error.action, error)
+const likedb = new LikeDB()
+const sync = syncWithKozmos(likedb, {
+  apiKey: "kozmos-api-key",
+  apiSecret: "kozmos-api-secret"
+  onPostUpdates: updates => console.log("Posted updates: ", updates),
+  onReceiveUpdates: updates => console.log("Received updates: ", updates)
 })
 ```
 
-Add a page to likes:
+That's it. Now you have a bookmarking database based on indexeddb, and it'll
+auto-sync to [Kozmos](https://kozmos.cool).
+
+### `.add`
+
+Create a new bookmark:
 
 ```js
-
-db.likes.like('github.com', err => console.error(err))
+await likedb.add({ title: "Wikipedia", url: "https://en.wikipedia.org" })
 ```
 
-Delete a page from your likes:
+### `.count`
+
+Get number of total bookmarks saved:
 
 ```js
-db.likes.unlike('github.com', err => console.error(err))
+await likedb.count()
 ```
 
-Check if a page is liked:
+### `.delete`
+
+Delete a bookmark by URL:
 
 ```js
-db.likes.get('github.com', (error, doc) => {
-  error
-  // => undefined
-
-  doc
-  // => undefined
-})
+await likedb.delete("https://en.wikipedia.org")
 ```
 
-## Relation with Kaktüs
+### `.listByTag`
 
-This library is based on [Kaktüs Web Browser's database library](https://github.com/kaktus/db). Although it only stores bookmarks,
-in the future kaktüs' meta store and its builtin keyword search will be useful for implementing offline search.
+```js
+const result = await likedb.listByTag("foobar")
+```
+
+### `.recent`
+
+List recently added bookmarks. Requires a limit parameter.
+
+```js
+const last10bookmarks = await likedb.recent(10)
+```
+
+### `.searchByTags(keyword, { offset: 0, limit: 10 })`
+
+Returns bookmarks with tags matching given keyword. For example, if a bookmark is tagged by `foobar`,
+it'll return for search term such as `fo`;
+
+```js
+const results = await likedb.searchByTags("fo")
+
+results[0].tags
+// => ["foobar"]
+```
+
+### `.searchByTitle(keyword, { offset: 0, limit: 10 })`
+
+Returns bookmarks with title matching given keyword.
+
+```js
+const results = await likedb.searchByTitle("wik")
+
+results[0].title
+// => Wikipedia
+```
+
+### `.searchByUrl(keyword, { offset: 0, limit: 10 })`
+
+Returns bookmarks with url matching given keyword.
+
+```js
+const results = await likedb.searchByUrl("you")
+
+results[0].url
+// => https://youtube.com
+```

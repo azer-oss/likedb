@@ -1,10 +1,163 @@
-const Servers = require("./lib/servers")
-const IndexedDBPull = require("./lib/indexeddb-pull")
-const stores = require("./lib/stores")
+const anglicize = require("anglicize")
+const sanitizeUrl = require("urls").clean
+const getStore = require("./lib/store")
 
-module.exports = options => {
-  stores.servers = new Servers(options)
-  stores.db.sync(stores.servers)
-  stores.db.pull = new IndexedDBPull(stores.db)
-  return stores
+const DEFAULT_OFFSET = 0
+const DEFAULT_LIMIT = 10
+
+class LikeDB {
+  constructor(options) {
+    this.options = options
+    this.store = getStore(options)
+  }
+
+  add({ url, title, tags, createdAt }) {
+    return this.store.add({
+      url,
+      title: title || "",
+      tags: tags || [],
+      cleanUrl: sanitizeUrl(url),
+      cleanTitle: sanitizeTitle(title),
+      createdAt: createdAt || Date.now(),
+      updatedAt: Date.now()
+    })
+  }
+
+  count() {
+    return this.store.count()
+  }
+
+  delete(url) {
+    return this.store.delete(url)
+  }
+
+  get(url) {
+    return this.store.get(url)
+  }
+
+  listByTag(tag) {
+    const result = []
+
+    return new Promise((resolve, reject) => {
+      this.store.select("tags", { only: tag }, (err, row) => {
+        if (err) return reject(err)
+        if (!row) return resolve(result.sort(sortByCreatedAt))
+
+        result.push(row.value)
+        row.continue()
+      })
+    })
+  }
+
+  recent(limit) {
+    const result = []
+
+    return new Promise((resolve, reject) => {
+      this.store.select("createdAt", null, "prev", (err, row) => {
+        if (err) return reject(err)
+        if (!row || result.length >= limit)
+          return resolve(result.sort(sortByCreatedAt))
+
+        result.push(row.value)
+        row.continue()
+      })
+    })
+  }
+
+  search(index, keyword, options) {
+    const result = []
+    const offset = options.offset || DEFAULT_OFFSET
+    const limit = options.limit || DEFAULT_LIMIT
+
+    let i = 0
+
+    return new Promise((resolve, reject) => {
+      this.store.select(
+        index,
+        { from: keyword, to: keyword + "\uffff" },
+        "prev",
+        (err, row) => {
+          if (err) return reject(err)
+          if (!row || result.length >= limit)
+            return resolve(result.sort(sortByCreatedAt))
+
+          if (i++ >= offset) {
+            result.push(row.value)
+          }
+
+          row.continue()
+        }
+      )
+    })
+  }
+
+  searchByTags(keyword, options) {
+    return this.search("tags", keyword, options || {})
+  }
+
+  searchByTitle(keyword, options) {
+    return this.search("cleanTitle", keyword, options || {})
+  }
+
+  searchByUrl(keyword, options) {
+    return this.search("cleanUrl", keyword, options || {})
+  }
+
+  untag(url, tag) {
+    return this.store.get(url).then(row => {
+      const index = row.tags.indexOf(tag)
+
+      if (index == -1) {
+        throw new Error("Tag doesn't exist")
+      }
+
+      row.tags.splice(index, 1)
+      row.updatedAt = Date.now()
+      return this.store.update(row)
+    })
+  }
+
+  updateTitle(url, title) {
+    return this.store.get(url).then(row => {
+      row.title = title
+      row.cleanTitle = sanitizeTitle(title)
+      row.updatedAt = Date.now()
+      return this.store.update(row)
+    })
+  }
+
+  tag(url, tag) {
+    return this.store.get(url).then(row => {
+      if (row.tags.indexOf(tag) > -1) {
+        throw new Error("Tag already added")
+      }
+
+      row.tags.push(tag)
+      row.updatedAt = Date.now()
+      return this.store.update(row)
+    })
+  }
+
+  deleteDB() {
+    return this.store.db.delete()
+  }
+}
+
+module.exports = LikeDB
+
+function sortByCreatedAt(a, b) {
+  if (a.createdAt > b.createdAt) {
+    return -1
+  }
+
+  if (a.createdAt < b.createdAt) {
+    return 1
+  }
+
+  return 0
+}
+
+function sanitizeTitle(title) {
+  if (!title) return ""
+  return anglicize(title.trim().toLowerCase())
 }
