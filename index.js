@@ -34,13 +34,16 @@ class LikeDB {
     return this.store.get(url)
   }
 
-  listByTag(tag) {
+  listByTag(tag, options) {
     const result = []
+    const limit = options.limit || 25
 
     return new Promise((resolve, reject) => {
       this.store.select("tags", { only: tag }, (err, row) => {
         if (err) return reject(err)
-        if (!row) return resolve(result.sort(sortByCreatedAt))
+        if (!row || result.length >= limit) {
+          return resolve(result.sort(sortByCreatedAt))
+        }
 
         result.push(row.value)
         row.continue()
@@ -54,8 +57,9 @@ class LikeDB {
     return new Promise((resolve, reject) => {
       this.store.select("createdAt", null, "prev", (err, row) => {
         if (err) return reject(err)
-        if (!row || result.length >= limit)
+        if (!row || result.length >= limit) {
           return resolve(result.sort(sortByCreatedAt))
+        }
 
         result.push(row.value)
         row.continue()
