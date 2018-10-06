@@ -1,5 +1,5 @@
-const sanitize = require("./lib/sanitize")
-const getStore = require("./lib/store")
+import sanitize from "./src/sanitize"
+import getStore from "./src/store"
 
 const DEFAULT_OFFSET = 0
 const DEFAULT_LIMIT = 10

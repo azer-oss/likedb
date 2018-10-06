@@ -13,6 +13,7 @@
   "devDependencies": {
     "budo": "^10.0.4",
     "prova": "github:azer/prova",
-    "relative-date": "github:azer/relative-date"
+    "relative-date": "github:azer/relative-date",
+    "typescript": "^3.1.1"
   }
 }
