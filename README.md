@@ -53,7 +53,7 @@ Delete a bookmark by URL:
 await likedb.delete("https://en.wikipedia.org")
 ```
 
-### `.get` 
+### `.get`
 
 Get a bookmark by URL:
 
@@ -107,4 +107,13 @@ const results = await likedb.searchByUrl("you")
 
 results[0].url
 // => https://youtube.com
+```
+
+# Tests
+
+Run unit tests (open `localhost:7559` to see results on web browser):
+
+```bash
+$  node test/likedb.js -b
+$  node test/scheduler.js -b
 ```

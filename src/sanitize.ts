@@ -1,14 +1,12 @@
-const anglicize = require("anglicize")
-const url = require("urls").clean
+import * as anglicize from "anglicize"
+import { clean as cleanUrl } from "urls"
 
-module.exports = sanitize
-
-function sanitize(bookmark) {
+export default function sanitize(bookmark) {
   delete bookmark.raw_url
 
   return {
     ...bookmark,
-    cleanUrl: url(bookmark.url),
+    cleanUrl: cleanUrl(bookmark.url),
     cleanTitle: title(bookmark.title)
   }
 }

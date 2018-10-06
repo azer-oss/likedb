@@ -1,7 +1,7 @@
 {
   "name": "likedb",
   "version": "2.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "example-app": "cd example-app && ../node_modules/.bin/budo index.js"
   },
@@ -13,6 +13,7 @@
   "devDependencies": {
     "budo": "^10.0.4",
     "prova": "github:azer/prova",
-    "relative-date": "github:azer/relative-date"
+    "relative-date": "github:azer/relative-date",
+    "typescript": "^3.1.1"
   }
 }

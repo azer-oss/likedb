@@ -1,4 +1,4 @@
-const LikeDB = require("../")
+const LikeDB = require("../dist").default
 const test = require("prova")
 const fixtures = require("./fixtures")
 

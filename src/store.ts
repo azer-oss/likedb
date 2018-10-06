@@ -1,9 +1,12 @@
-module.exports = ({ testing }) => {
-  const dbname = testing
+import indexeddb from "indexeddb"
+import { IDBOptions } from "./types"
+
+export default (options: IDBOptions) => {
+  const dbname = options.testing
     ? "likedb-test-" + Math.floor(Math.random() * 100)
     : "likedb"
 
-  const db = require("indexeddb")(dbname, {
+  const db = indexeddb(dbname, {
     version: 1
   })
 

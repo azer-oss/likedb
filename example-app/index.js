@@ -1,6 +1,6 @@
 const relativeDate = require("relative-date")
-const LikeDB = require("../")
-const syncWithKozmos = require("../lib/kozmos")
+const LikeDB = require("../dist").default
+const syncWithKozmos = require("../dist/kozmos").default
 
 const likedb = new LikeDB()
 const sync = syncWithKozmos(likedb, {
@@ -9,7 +9,7 @@ const sync = syncWithKozmos(likedb, {
   apiSecret: "kqlo8tgwi53jte4twanlihuwp72njbmzogdrx9xwqwp7y19re4",
   onPostUpdates: updates => console.info("> > > posted updates", updates),
   onReceiveUpdates: updates =>
-    console.log("< < < received updates", updates.content.length)
+    console.log("< < < received updates", updates.length)
 })
 
 sync.servers.push.store.onChange(update)

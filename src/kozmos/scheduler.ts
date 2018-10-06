@@ -1,4 +1,10 @@
-class Scheduler {
+export default class Scheduler {
+  interval: number
+  scheduledAt: number
+  lastCalledAt: number
+  timer?: number
+  callFn: () => void
+
   constructor(options) {
     this.interval = options.interval || 5 // seconds
     this.scheduledAt = 0
@@ -6,11 +12,11 @@ class Scheduler {
     this.timer = undefined
     this.callFn = options.fn
 
-    window.addEventListener('online', () => this.schedule())
-    window.addEventListener('offline', () => this.abort())
+    window.addEventListener("online", () => this.schedule())
+    window.addEventListener("offline", () => this.abort())
   }
 
-  schedule(customInterval) {
+  schedule(customIntervalSecs?: number) {
     if (this.scheduledAt > 0 || !navigator.onLine) {
       // Already scheduled or offline
       return
@@ -26,8 +32,8 @@ class Scheduler {
       interval = 0
     }
 
-    if (typeof customInterval === 'number') {
-      interval = customInterval * 1000
+    if (typeof customIntervalSecs === "number") {
+      interval = customIntervalSecs * 1000
     }
 
     this.timer = setTimeout(() => this.call(), interval)
@@ -38,8 +44,7 @@ class Scheduler {
       clearTimeout(this.timer)
       this.timer = undefined
       this.scheduledAt = 0
-    } catch (err) {
-    }
+    } catch (err) {}
   }
 
   reschedule(customInterval) {
@@ -54,5 +59,3 @@ class Scheduler {
     this.callFn()
   }
 }
-
-module.exports = Scheduler

@@ -1,7 +1,7 @@
 const test = require("prova")
-const Scheduler = require("../lib/scheduler")
+const Scheduler = require("../dist/kozmos/scheduler").default
 
-test('makes the first call immediately', t => {
+test("makes the first call immediately", t => {
   t.plan(1)
 
   const start = Date.now()
@@ -15,14 +15,14 @@ test('makes the first call immediately', t => {
   s.schedule()
 })
 
-test('later calls will be delayed in intervals', t => {
+test("later calls will be delayed in intervals", t => {
   t.plan(8)
 
   let start = Date.now()
   let counter = 0
 
   var s = new Scheduler({
-    interval: 0.250,
+    interval: 0.25,
     fn: () => {
       counter++
 
@@ -43,7 +43,7 @@ test('later calls will be delayed in intervals', t => {
   s.schedule()
 })
 
-test('aborting', t => {
+test("aborting", t => {
   t.plan(1)
 
   const start = Date.now()

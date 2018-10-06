@@ -1,8 +1,15 @@
-const Scheduler = require("./scheduler")
-const syncdb = require("./sync-db")
+import Scheduler from "./scheduler"
+import syncdb from "./sync-db"
+import Servers from "./servers"
+import * as types from "./types"
+import { types as idbTypes } from "indexeddb"
 
-class PostQueue {
-  constructor(servers, options) {
+export default class PostQueue {
+  scheduler: Scheduler
+  servers: Servers
+  store: idbTypes.IStore
+  retryInterval: number
+  constructor(servers: Servers, options: types.IAPIOptions) {
     this.servers = servers
     this.retryInterval = options.postRetryIntervalSecs || 10
     this.scheduler = new Scheduler({
@@ -17,7 +24,7 @@ class PostQueue {
     this.scheduler.schedule()
   }
 
-  add(updates, callback) {
+  add(updates: idbTypes.IUpdate[], callback: types.ICallback) {
     Promise.all(updates.map(update => this.store.add(update)))
       .catch(err => callback(err))
       .then(() => {
@@ -26,8 +33,8 @@ class PostQueue {
       })
   }
 
-  all(callback) {
-    const updates = []
+  all(callback: types.ICallback) {
+    const updates: idbTypes.IUpdate[] = []
 
     this.store.all((error, row) => {
       if (error) return callback(error)
@@ -69,5 +76,3 @@ class PostQueue {
     this.scheduler.reschedule(this.retryInterval)
   }
 }
-
-module.exports = PostQueue
