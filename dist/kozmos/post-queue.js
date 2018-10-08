@@ -1,15 +1,16 @@
 "use strict";
-const Scheduler = require("./scheduler");
-const syncdb = require("./sync-db");
+Object.defineProperty(exports, "__esModule", { value: true });
+const scheduler_1 = require("./scheduler");
+const sync_db_1 = require("./sync-db");
 class PostQueue {
     constructor(servers, options) {
         this.servers = servers;
         this.retryInterval = options.postRetryIntervalSecs || 10;
-        this.scheduler = new Scheduler({
+        this.scheduler = new scheduler_1.default({
             interval: options.postIntervalSecs || 1.5,
             fn: () => this.post()
         });
-        this.store = syncdb.store("updates", {
+        this.store = sync_db_1.default.store("updates", {
             indexes: ["queuedAt"]
         });
         this.scheduler.schedule();
@@ -59,4 +60,4 @@ class PostQueue {
         this.scheduler.reschedule(this.retryInterval);
     }
 }
-module.exports = PostQueue;
+exports.default = PostQueue;

@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const pull_1 = require("./pull");
 const push_1 = require("./push");
-const _api_1 = require(".api");
-class Servers extends _api_1.default {
+const api_1 = require("./api");
+class Servers extends api_1.default {
     constructor(options) {
         super(options);
         this.pull = new pull_1.default(this, options);
@@ -19,4 +19,3 @@ class Servers extends _api_1.default {
     }
 }
 exports.default = Servers;
-module.exports = Servers;

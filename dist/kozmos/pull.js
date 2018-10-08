@@ -1,12 +1,13 @@
 "use strict";
-const Pull = require("indexeddb/lib/pull");
-const PostQueue = require("./post-queue");
+Object.defineProperty(exports, "__esModule", { value: true });
+const indexeddb_1 = require("indexeddb");
+const post_queue_1 = require("./post-queue");
 // Pull updates from source (offline DB), post it to Kozmos server
-class PullForServers extends Pull {
+class PullForServers extends indexeddb_1.Pull {
     constructor(servers, options) {
         super();
         this.servers = servers;
-        this.postQueue = new PostQueue(this.servers, options);
+        this.postQueue = new post_queue_1.default(this.servers, options);
     }
     // This function gets called whenever there is any updates.
     receive(updates, callback) {
@@ -16,4 +17,4 @@ class PullForServers extends Pull {
         this.postQueue.add(updates, callback);
     }
 }
-module.exports = PullForServers;
+exports.default = PullForServers;

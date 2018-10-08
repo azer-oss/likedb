@@ -1,7 +1,7 @@
-import sanitize from "./src/sanitize"
-import getStore from "./src/store"
-import * as types from "./src/types"
-import { IDBOptions, IListOptions } from "./src/types"
+import sanitize from "./sanitize"
+import getStore from "./store"
+import * as types from "./types"
+import { IDBOptions, IListOptions } from "./types"
 
 const DEFAULT_OFFSET = 0
 const DEFAULT_LIMIT = 10

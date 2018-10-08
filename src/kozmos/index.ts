@@ -1,6 +1,6 @@
 import Servers from "./servers"
 import IndexedDBPull from "./indexeddb-pull"
-import LikeDB from "../../index"
+import LikeDB from "../index"
 import * as types from "./types"
 
 export default (likedb: LikeDB, options: types.IAPIOptions) => {

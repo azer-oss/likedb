@@ -1,7 +1,5 @@
-declare const Push: any;
-declare const Scheduler: any;
-declare const syncdb: any;
-declare class PushForServers extends Push {
+import { Push } from "indexeddb";
+export default class PushForServers extends Push {
     constructor(servers: any, options: any);
     checkForUpdates(): void;
     sendUpdates(updates: any, callback: any): void;

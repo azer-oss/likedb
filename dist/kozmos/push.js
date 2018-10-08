@@ -1,18 +1,19 @@
 "use strict";
-const Push = require("indexeddb/lib/push");
-const Scheduler = require("./scheduler");
-const syncdb = require("./sync-db");
+Object.defineProperty(exports, "__esModule", { value: true });
+const indexeddb_1 = require("indexeddb");
+const scheduler_1 = require("./scheduler");
+const sync_db_1 = require("./sync-db");
 // This class is for fetching new updates from Kozmos servers,
 // and publishing them to user's offline database.
-class PushForServers extends Push {
+class PushForServers extends indexeddb_1.Push {
     constructor(servers, options) {
         super();
         this.servers = servers;
-        this.scheduler = new Scheduler({
+        this.scheduler = new scheduler_1.default({
             interval: options.pushIntervalSecs || 15,
             fn: () => this.checkForUpdates()
         });
-        this.store = syncdb.store("pushlogs", {
+        this.store = sync_db_1.default.store("pushlogs", {
             key: { autoIncrement: true, keyPath: "id" },
             indexes: ["id"]
         });
@@ -71,4 +72,5 @@ class PushForServers extends Push {
         this.servers.onError(err, "checking-updates");
     }
 }
+exports.default = PushForServers;
 module.exports = PushForServers;

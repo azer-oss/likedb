@@ -1,10 +1,10 @@
-const Push = require("indexeddb/lib/push")
-const Scheduler = require("./scheduler")
-const syncdb = require("./sync-db")
+import { Push } from "indexeddb"
+import Scheduler from "./scheduler"
+import syncdb from "./sync-db"
 
 // This class is for fetching new updates from Kozmos servers,
 // and publishing them to user's offline database.
-class PushForServers extends Push {
+export default class PushForServers extends Push {
   constructor(servers, options) {
     super()
 

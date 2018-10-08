@@ -1,5 +1,5 @@
-import * as types from "./src/types";
-import { IDBOptions, IListOptions } from "./src/types";
+import * as types from "./types";
+import { IDBOptions, IListOptions } from "./types";
 export default class LikeDB {
     options: IDBOptions;
     store: any;

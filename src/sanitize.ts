@@ -1,5 +1,5 @@
 import anglicize from "anglicize"
-import { clean as cleanUrl } from urls
+import { clean as cleanUrl } from "urls"
 
 export default function sanitize(bookmark) {
   delete bookmark.raw_url

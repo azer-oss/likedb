@@ -1,3 +1,5 @@
-module.exports = require("indexeddb")("likedb-sync-v2", {
+import indexeddb from "indexeddb"
+
+export default indexeddb("likedb-sync-v2", {
   version: 1
 })

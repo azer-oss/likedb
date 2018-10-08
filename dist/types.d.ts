@@ -29,3 +29,6 @@ export interface IDBRow {
     continue: () => void;
     value: IBookmark;
 }
+export interface ICallback {
+    (error?: Error, result?: any): void;
+}

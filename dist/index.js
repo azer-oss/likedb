@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const sanitize_1 = require("./src/sanitize");
-const store_1 = require("./src/store");
+const sanitize_1 = require("./sanitize");
+const store_1 = require("./store");
 const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 10;
 class LikeDB {
