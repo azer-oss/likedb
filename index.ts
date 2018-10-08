@@ -1,76 +1,99 @@
 import sanitize from "./src/sanitize"
 import getStore from "./src/store"
+import * as types from "./src/types"
+import { IDBOptions, IListOptions } from "./src/types"
 
 const DEFAULT_OFFSET = 0
 const DEFAULT_LIMIT = 10
 
-class LikeDB {
-  constructor(options) {
+export default class LikeDB {
+  options: IDBOptions
+  store: any
+
+  constructor(options?: types.IDBOptions) {
     this.options = options || {}
     this.store = getStore(this.options)
   }
 
-  add({ url, title, tags, createdAt }) {
+  add(options: types.INewBookmark): Promise<any> {
     return this.store.add(
       sanitize({
-        url,
-        title: title || "",
-        tags: tags || [],
-        createdAt: createdAt || Date.now(),
+        url: options.url,
+        title: options.title || "",
+        tags: options.tags || [],
+        createdAt: options.createdAt || Date.now(),
         updatedAt: Date.now()
       })
     )
   }
 
-  count() {
+  count(): Promise<number> {
     return this.store.count()
   }
 
-  delete(url) {
+  delete(url: string): Promise<any> {
     return this.store.delete(url)
   }
 
-  get(url) {
+  get(url: string): Promise<types.IBookmark> {
     return this.store.get(url)
   }
 
-  listByTag(tag, options) {
-    const result = []
-    const limit = options.limit || 25
+  listByTag(
+    tag: string,
+    options?: types.IListOptions
+  ): Promise<types.IBookmark[]> {
+    const result: types.IBookmark[] = []
+    const limit: number = options && options.limit ? options.limit : 25
 
     return new Promise((resolve, reject) => {
-      this.store.select("tags", { only: tag }, (err, row) => {
-        if (err) return reject(err)
-        if (!row || result.length >= limit) {
-          return resolve(result.sort(sortByCreatedAt))
-        }
+      this.store.select(
+        "tags",
+        { only: tag },
+        (err?: Error, row?: types.IDBRow) => {
+          if (err) return reject(err)
+          if (!row || result.length >= limit) {
+            return resolve(result.sort(sortByCreatedAt))
+          }
 
-        result.push(row.value)
-        row.continue()
-      })
+          result.push(row.value)
+          row.continue()
+        }
+      )
     })
   }
 
-  recent(limit) {
-    const result = []
+  recent(limit: number): Promise<types.IBookmark[]> {
+    const result: types.IBookmark[] = []
 
     return new Promise((resolve, reject) => {
-      this.store.select("createdAt", null, "prev", (err, row) => {
-        if (err) return reject(err)
-        if (!row || result.length >= limit) {
-          return resolve(result.sort(sortByCreatedAt))
-        }
+      this.store.select(
+        "createdAt",
+        null,
+        "prev",
+        (err: Error, row: types.IDBRow) => {
+          if (err) return reject(err)
+          if (!row || result.length >= limit) {
+            return resolve(result.sort(sortByCreatedAt))
+          }
 
-        result.push(row.value)
-        row.continue()
-      })
+          result.push(row.value)
+          row.continue()
+        }
+      )
     })
   }
 
-  search(index, keyword, options) {
-    const result = []
-    const offset = options.offset || DEFAULT_OFFSET
-    const limit = options.limit || DEFAULT_LIMIT
+  search(
+    index: string,
+    keyword: string,
+    options?: IListOptions
+  ): Promise<types.IBookmark[]> {
+    const result: types.IBookmark[] = []
+    const offset: number =
+      options && options.offset ? options.offset : DEFAULT_OFFSET
+    const limit: number =
+      options && options.limit ? options.limit : DEFAULT_LIMIT
 
     let i = 0
 
@@ -79,7 +102,7 @@ class LikeDB {
         index,
         { from: keyword, to: keyword + "\uffff" },
         "prev",
-        (err, row) => {
+        (err: Error, row: types.IDBRow) => {
           if (err) return reject(err)
           if (!row || result.length >= limit)
             return resolve(result.sort(sortByCreatedAt))
@@ -94,20 +117,29 @@ class LikeDB {
     })
   }
 
-  searchByTags(keyword, options) {
+  searchByTags(
+    keyword: string,
+    options: types.IListOptions
+  ): Promise<types.IBookmark[]> {
     return this.search("tags", keyword, options || {})
   }
 
-  searchByTitle(keyword, options) {
+  searchByTitle(
+    keyword: string,
+    options: types.IListOptions
+  ): Promise<types.IBookmark[]> {
     return this.search("cleanTitle", keyword, options || {})
   }
 
-  searchByUrl(keyword, options) {
+  searchByUrl(
+    keyword: string,
+    options: types.IListOptions
+  ): Promise<types.IBookmark[]> {
     return this.search("cleanUrl", keyword, options || {})
   }
 
-  untag(url, tag) {
-    return this.store.get(url).then(row => {
+  untag(url: string, tag: string): Promise<any> {
+    return this.store.get(url).then((row: types.IBookmarkWithTags) => {
       const index = row.tags ? row.tags.indexOf(tag) : -1
 
       if (index === -1) {
@@ -120,16 +152,16 @@ class LikeDB {
     })
   }
 
-  updateTitle(url, title) {
-    return this.store.get(url).then(row => {
+  updateTitle(url: string, title: string): Promise<any> {
+    return this.store.get(url).then((row: types.IBookmark) => {
       row.title = title
       row.updatedAt = Date.now()
       return this.store.update(sanitize(row))
     })
   }
 
-  tag(url, tag) {
-    return this.store.get(url).then(row => {
+  tag(url: string, tag: string): Promise<any> {
+    return this.store.get(url).then((row: types.IBookmark) => {
       if (!row.tags) {
         row.tags = [tag]
         row.updatedAt = Date.now()
@@ -146,14 +178,12 @@ class LikeDB {
     })
   }
 
-  deleteDB() {
+  deleteDB(): Promise<any> {
     return this.store.db.delete()
   }
 }
 
-module.exports = LikeDB
-
-function sortByCreatedAt(a, b) {
+function sortByCreatedAt(a: types.IBookmark, b: types.IBookmark): number {
   if (a.createdAt > b.createdAt) {
     return -1
   }

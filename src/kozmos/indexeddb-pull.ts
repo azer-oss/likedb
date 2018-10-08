@@ -1,8 +1,10 @@
-const Pull = require("indexeddb/lib/indexeddb-pull")
-const sanitize = require("../sanitize")
+import { IndexedDBPull, types as idbTypes } from "indexeddb"
+import sanitize from "../sanitize"
+import * as types from "./types"
 
-class IndexedDBPull extends Pull {
-  copyUpdate(update, callback) {
+// Receives updates from other sources
+export default class CustomIndexedDBPull extends IndexedDBPull {
+  copyUpdate(update: idbTypes.IUpdate, callback: idbTypes.ICallback) {
     const store = this.stores()[update.store]
     if (!store) return callback(new Error("Unknown store: " + update.store))
 
@@ -23,5 +25,3 @@ class IndexedDBPull extends Pull {
     })
   }
 }
-
-module.exports = IndexedDBPull

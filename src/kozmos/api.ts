@@ -1,36 +1,39 @@
-class API {
-  constructor(options) {
+import * as types from "./types"
+
+export default class API {
+  host: string
+  apiKey: string
+  apiSecret: string
+
+  constructor(options: types.IAPIOptions) {
     this.host = options.host || "https://getkozmos.com"
     this.apiKey = options.apiKey
     this.apiSecret = options.apiSecret
-    this.deprecatedToken = options.deprecatedToken
   }
 
-  get(url, callback) {
+  get(url: string, callback: types.ICallback) {
     this.sendJSON("GET", url, null, callback)
   }
 
-  post(url, data, callback) {
+  post(url: string, data: any, callback: types.ICallback) {
     this.sendJSON("POST", url, data, callback)
   }
 
-  put(url, data, callback) {
+  put(url: string, data: any, callback: types.ICallback) {
     this.sendJSON("PUT", url, data, callback)
   }
 
-  delete(url, data, callback) {
+  delete(url: string, data: any, callback: types.ICallback) {
     this.sendJSON("DELETE", url, data, callback)
   }
 
-  sendJSON(method, url, data, callback) {
+  sendJSON(method: string, url: string, data: any, callback: types.ICallback) {
     var xmlhttp = new XMLHttpRequest()
     xmlhttp.open(method, this.host + url)
 
     if (this.apiKey && this.apiSecret) {
       xmlhttp.setRequestHeader("X-API-Key", this.apiKey)
       xmlhttp.setRequestHeader("X-API-Secret", this.apiSecret)
-    } else {
-      xmlhttp.setRequestHeader("X-API-Token", this.deprecatedToken)
     }
 
     if (data) {
@@ -73,5 +76,3 @@ class API {
     }
   }
 }
-
-module.exports = API

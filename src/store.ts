@@ -1,5 +1,7 @@
-module.exports = ({ testing }) => {
-  const dbname = testing
+import { IDBOptions } from "./types"
+
+export default (options: IDBOptions) => {
+  const dbname = options.testing
     ? "likedb-test-" + Math.floor(Math.random() * 100)
     : "likedb"
 
