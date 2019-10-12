@@ -1,9 +1,10 @@
 const LikeDB = require("../dist").default
+const resetStorage = require("../dist/storage").reset
 const test = require("prova")
 const fixtures = require("./fixtures")
 
 test("creating a new bookmark", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
 
   await db.add({ url: "https://foobar.com", title: "Foo Bar" })
 
@@ -15,13 +16,13 @@ test("creating a new bookmark", async t => {
   t.equal(rec.cleanTitle, "foo bar")
   t.equal(rec.createdAt, rec.updatedAt)
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
 
 test("updating title", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
 
   await db.add({ url: "https://foobar.com", title: "Foo Bar" })
 
@@ -35,13 +36,13 @@ test("updating title", async t => {
   t.equal(rec.cleanTitle, "oo oo")
   t.ok(rec.createdAt < rec.updatedAt)
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
 
 test("tagging", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
 
   await db.add({ url: "https://foobar.com", title: "Foo Bar", tags: ["foo"] })
   await db.tag("https://foobar.com", "bar")
@@ -57,13 +58,76 @@ test("tagging", async t => {
   t.deepEqual(rec.tags, ["foo", "qux"])
   t.ok(rec.createdAt < rec.updatedAt)
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
 
+test("collections", async t => {
+  const db = createDB()
+
+  await db.createCollection({ title: "berlin", desc: "hello world" })
+  await db.createCollection({ title: "amsterdam", desc: "foobar" })
+  await db.createCollection({ title: "new york", desc: "qux" })
+
+  const collections = await db.listCollections()
+  t.equal(collections.length, 3)
+  t.equal(collections[2].title, "berlin")
+  t.equal(collections[1].title, "amsterdam")
+  t.equal(collections[0].title, "new york")
+
+  let rec = await db.getCollection("berlin")
+  t.equal(rec.title, "berlin")
+  t.equal(rec.desc, "hello world")
+  t.ok(rec.createdAt > Date.now() - 1000)
+  t.ok(rec.updatedAt > Date.now() - 1000)
+
+  await purgeDB(db)
+
+  t.end()
+})
+
+test("collections/links", async t => {
+  const db = createDB()
+
+  await db.createCollection({ title: "berlin", desc: "hello world" })
+
+  await db.addToCollection({
+    collection: "berlin",
+    url: "https://foobar.com",
+    title: "Foo Bar"
+  })
+
+  await db.addToCollection({
+    collection: "berlin",
+    url: "https://span.com",
+    title: "Span"
+  })
+
+  await db.addToCollection({
+    collection: "berlin",
+    url: "https://eggs.com",
+    title: "Eggs"
+  })
+
+  let links = await db.listByCollection("berlin")
+
+  console.log("links:", links)
+
+  t.equal(links.length, 3)
+  t.equal(links[2].title, "Foo Bar")
+  t.equal(links[2].url, "https://foobar.com")
+  t.equal(links[1].title, "Span")
+  t.equal(links[1].url, "https://span.com")
+  t.equal(links[0].title, "Eggs")
+  t.equal(links[0].url, "https://eggs.com")
+
+  await purgeDB(db)
+  t.end()
+})
+
 test("deleting", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
   await db.add({ url: "https://foobar.com", title: "Foo Bar" })
 
   let rec = await db.get("https://foobar.com")
@@ -74,13 +138,13 @@ test("deleting", async t => {
   rec = await db.get("https://foobar.com")
   t.notOk(rec)
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
 
 test("recent", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
   fixtures.forEach(async row => {
     await db.add(row)
   })
@@ -92,13 +156,13 @@ test("recent", async t => {
   t.equal(recent[2].title, "Shahnameh - Wikipedia")
   t.equal(recent[3].title, "HOW TO MAKE A BABY LAUGH! - YouTube")
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
 
 test("listByTag", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
   fixtures.forEach(async row => {
     await db.add(row)
   })
@@ -113,13 +177,13 @@ test("listByTag", async t => {
   t.equal(parenting[0].title, "How To Parent Like a German | Time")
   t.equal(parenting[1].title, "HOW TO MAKE A BABY LAUGH! - YouTube")
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
 
 test("searchByTitle", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
   fixtures.forEach(async row => {
     await db.add(row)
   })
@@ -130,13 +194,13 @@ test("searchByTitle", async t => {
   t.equal(howto[0].title, "How To Parent Like a German | Time")
   t.equal(howto[1].title, "HOW TO MAKE A BABY LAUGH! - YouTube")
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
 
 test("searchByUrl", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
   fixtures.forEach(async row => {
     await db.add(row)
   })
@@ -150,13 +214,13 @@ test("searchByUrl", async t => {
   t.equal(en[0].title, "Pieter Bruegel the Elder - Wikipedia")
   t.equal(en[1].title, "Shahnameh - Wikipedia")
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
 
 test("searchByTags", async t => {
-  const db = new LikeDB({ testing: true })
+  const db = createDB()
   fixtures.forEach(async row => {
     await db.add(row)
   })
@@ -171,7 +235,19 @@ test("searchByTags", async t => {
   t.equal(parenting[0].title, "How To Parent Like a German | Time")
   t.equal(parenting[1].title, "HOW TO MAKE A BABY LAUGH! - YouTube")
 
-  db.deleteDB()
+  await purgeDB(db)
 
   t.end()
 })
+
+function createDB() {
+  resetStorage()
+  return new LikeDB({ testing: true })
+}
+
+function purgeDB(db) {
+  return new Promise(resolve => {
+    db.deleteDB()
+    setTimeout(resolve, 10)
+  })
+}

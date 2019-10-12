@@ -130,3 +130,7 @@ h1 {
   font: 600 14px "Open Sans";
   cursor: pointer;
 }
+
+select {
+  padding: 10px;
+}

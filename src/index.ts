@@ -1,22 +1,28 @@
 import sanitize from "./sanitize"
-import getStore from "./store"
+import * as storage from "./storage"
 import * as types from "./types"
-import { IDBOptions, IListOptions } from "./types"
+import { IDB, IStore } from "indexeddb"
 
 const DEFAULT_OFFSET = 0
 const DEFAULT_LIMIT = 10
 
 export default class LikeDB {
-  options: IDBOptions
-  store: any
+  options: types.IDBOptions
+  db: IDB
+  bookmarksStore: IStore
+  collectionsStore: IStore
+  collectionLinksStore: IStore
 
   constructor(options?: types.IDBOptions) {
-    this.options = options || {}
-    this.store = getStore(this.options)
+    this.options = options || { version: 1 }
+    this.db = storage.db(this.options)
+    this.bookmarksStore = storage.bookmarks(this.options)
+    this.collectionsStore = storage.collections(this.options)
+    this.collectionLinksStore = storage.collectionLinks(this.options)
   }
 
   add(options: types.INewBookmark): Promise<any> {
-    return this.store.add(
+    return this.bookmarksStore.add(
       sanitize({
         url: options.url,
         title: options.title || "",
@@ -28,15 +34,15 @@ export default class LikeDB {
   }
 
   count(): Promise<number> {
-    return this.store.count()
+    return this.bookmarksStore.count()
   }
 
   delete(url: string): Promise<any> {
-    return this.store.delete(url)
+    return this.bookmarksStore.delete(url)
   }
 
   get(url: string): Promise<types.IBookmark> {
-    return this.store.get(url)
+    return this.bookmarksStore.get(url) as Promise<types.IBookmark>
   }
 
   listByTag(
@@ -47,10 +53,10 @@ export default class LikeDB {
     const limit: number = options && options.limit ? options.limit : 25
 
     return new Promise((resolve, reject) => {
-      this.store.select(
+      this.bookmarksStore.select(
         "tags",
         { only: tag },
-        (err?: Error, row?: types.IDBRow) => {
+        (err?: Error, row?: types.IDBRow<types.IBookmark>) => {
           if (err) return reject(err)
           if (!row || result.length >= limit) {
             return resolve(result.sort(sortByCreatedAt))
@@ -67,11 +73,11 @@ export default class LikeDB {
     const result: types.IBookmark[] = []
 
     return new Promise((resolve, reject) => {
-      this.store.select(
+      this.bookmarksStore.select(
         "createdAt",
         null,
         "prev",
-        (err: Error, row: types.IDBRow) => {
+        (err: Error | undefined, row: types.IDBRow<types.IBookmark>) => {
           if (err) return reject(err)
           if (!row || result.length >= limit) {
             return resolve(result.sort(sortByCreatedAt))
@@ -84,10 +90,102 @@ export default class LikeDB {
     })
   }
 
+  createCollection({
+    title,
+    desc
+  }: {
+    title: string
+    desc: string
+  }): Promise<types.ICollection> {
+    return this.collectionsStore.add({
+      id: Date.now(),
+      title,
+      desc,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }) as Promise<types.ICollection>
+  }
+
+  getCollection(title: string): Promise<types.ICollection> {
+    return this.collectionsStore.get(title) as Promise<types.ICollection>
+  }
+
+  async addToCollection({
+    collection,
+    url,
+    title,
+    desc
+  }: {
+    collection: string
+    url: string
+    title: string
+    desc: string
+  }): Promise<types.ICollectionLink> {
+    const existing = await this.get(url)
+
+    if (!existing) {
+      await this.add({ url, title })
+    }
+
+    return this.collectionLinksStore.add({
+      key: `${collection}:${url}`,
+      collection,
+      url,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }) as Promise<types.ICollectionLink>
+  }
+
+  listCollections(): Promise<types.ICollection[]> {
+    const result: types.ICollection[] = []
+
+    return new Promise((resolve, reject) => {
+      this.collectionsStore.all(
+        (err?: Error, row?: types.IDBRow<types.ICollection>) => {
+          if (err) return reject(err)
+          if (!row) {
+            return resolve(result.sort(sortCollByCreatedAt))
+          }
+
+          result.push(row.value)
+          row.continue()
+        }
+      )
+    })
+  }
+
+  listByCollection(
+    collection: string,
+    options?: types.IListOptions
+  ): Promise<types.ICollectionLink[]> {
+    const result: types.ICollectionLink[] = []
+    const limit: number = options && options.limit ? options.limit : 25
+
+    return new Promise((resolve, reject) => {
+      this.collectionLinksStore.select(
+        "collection",
+        { only: collection },
+        async (err?: Error, row?: types.IDBRow<types.ICollectionLink>) => {
+          if (err) return reject(err)
+          if (!row || result.length >= limit) {
+            return resolve(
+              await Promise.all(
+                result.sort(sortByCreatedAt).map(joinBookmarkAndLink(this))
+              )
+            )
+          }
+
+          result.push(row.value)
+          row.continue()
+        }
+      )
+    })
+  }
+
   search(
     index: string,
     keyword: string,
-    options?: IListOptions
+    options?: types.IListOptions
   ): Promise<types.IBookmark[]> {
     const result: types.IBookmark[] = []
     const offset: number =
@@ -98,11 +196,11 @@ export default class LikeDB {
     let i = 0
 
     return new Promise((resolve, reject) => {
-      this.store.select(
+      this.bookmarksStore.select(
         index,
         { from: keyword, to: keyword + "\uffff" },
         "prev",
-        (err: Error, row: types.IDBRow) => {
+        (err: Error | undefined, row: types.IDBRow<types.IBookmark>) => {
           if (err) return reject(err)
           if (!row || result.length >= limit)
             return resolve(result.sort(sortByCreatedAt))
@@ -139,7 +237,9 @@ export default class LikeDB {
   }
 
   untag(url: string, tag: string): Promise<any> {
-    return this.store.get(url).then((row: types.IBookmarkWithTags) => {
+    return (this.bookmarksStore.get(url) as Promise<
+      types.IBookmarkWithTags
+    >).then((row: types.IBookmarkWithTags) => {
       const index = row.tags ? row.tags.indexOf(tag) : -1
 
       if (index === -1) {
@@ -148,42 +248,71 @@ export default class LikeDB {
 
       row.tags.splice(index, 1)
       row.updatedAt = Date.now()
-      return this.store.update(row)
+      return this.bookmarksStore.update(row)
     })
   }
 
   updateTitle(url: string, title: string): Promise<any> {
-    return this.store.get(url).then((row: types.IBookmark) => {
-      row.title = title
-      row.updatedAt = Date.now()
-      return this.store.update(sanitize(row))
-    })
+    return (this.bookmarksStore.get(url) as Promise<types.IBookmark>).then(
+      (row: types.IBookmark) => {
+        row.title = title
+        row.updatedAt = Date.now()
+        return this.bookmarksStore.update(sanitize(row))
+      }
+    )
   }
 
   tag(url: string, tag: string): Promise<any> {
-    return this.store.get(url).then((row: types.IBookmark) => {
-      if (!row.tags) {
-        row.tags = [tag]
+    return (this.bookmarksStore.get(url) as Promise<types.IBookmark>).then(
+      (row: types.IBookmark) => {
+        if (!row.tags) {
+          row.tags = [tag]
+          row.updatedAt = Date.now()
+          return this.bookmarksStore.update(row)
+        }
+
+        if (row.tags.indexOf(tag) > -1) {
+          throw new Error("Tag already added")
+        }
+
+        row.tags.push(tag)
         row.updatedAt = Date.now()
-        return this.store.update(row)
+        return this.bookmarksStore.update(row)
       }
-
-      if (row.tags.indexOf(tag) > -1) {
-        throw new Error("Tag already added")
-      }
-
-      row.tags.push(tag)
-      row.updatedAt = Date.now()
-      return this.store.update(row)
-    })
+    )
   }
 
   deleteDB(): Promise<any> {
-    return this.store.db.delete()
+    return this.db.delete()
+  }
+}
+
+function joinBookmarkAndLink(db: LikeDB) {
+  return async function(link: types.ICollectionLink) {
+    const b = await db.get(link.url)
+    return {
+      ...link,
+      title: b.title
+    }
   }
 }
 
 function sortByCreatedAt(a: types.IBookmark, b: types.IBookmark): number {
+  if (a.createdAt > b.createdAt) {
+    return -1
+  }
+
+  if (a.createdAt < b.createdAt) {
+    return 1
+  }
+
+  return 0
+}
+
+function sortCollByCreatedAt(
+  a: types.ICollection,
+  b: types.ICollection
+): number {
   if (a.createdAt > b.createdAt) {
     return -1
   }

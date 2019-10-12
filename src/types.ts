@@ -1,6 +1,10 @@
-export interface IDBOptions {
+import { IDBOptions as BaseIDBOptions } from "indexeddb"
+
+interface EnableTestingMode {
   testing?: boolean
 }
+
+export type IDBOptions = EnableTestingMode & BaseIDBOptions
 
 export interface INewBookmark {
   url: string
@@ -30,11 +34,27 @@ export interface IListOptions {
   offset?: number
 }
 
-export interface IDBRow {
+export interface IDBRow<T> {
   continue: () => void
-  value: IBookmark
+  value: T
 }
 
 export interface ICallback {
   (error?: Error, result?: any): void
+}
+
+export interface ICollection {
+  title: string
+  desc: string
+  createdAt: number
+  updatedAt: number
+}
+
+export interface ICollectionLink {
+  collection: string
+  url: string
+  title: string
+  desc: string
+  createdAt: number
+  updatedAt: number
 }

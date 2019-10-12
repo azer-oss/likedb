@@ -6,7 +6,7 @@ const likedb = new LikeDB()
 const sync = syncWithKozmos(likedb, {
   host: "http://localhost:9000",
   apiKey: "bZi6",
-  apiSecret: "kqlo8tgwi53jte4twanlihuwp72njbmzogdrx9xwqwp7y19re4",
+  apiSecret: "qjadolsw37p2gjdmktg3ysqtxdp07s4rlq27pa0zs7mngjksf9",
   onPostUpdates: updates => console.info("> > > posted updates", updates),
   onReceiveUpdates: updates =>
     console.log("< < < received updates", updates.length)
@@ -18,10 +18,10 @@ update()
 
 document.querySelector("button").onclick = () => {
   const input = document.querySelector("input")
-  likedb.add({ title: input.value, url: input.value })
+  likedb.add({ title: prompt("title?"), url: input.value })
 }
 
-function update() {
+async function update() {
   sync.servers.push.getPushLog((err, log) => {
     document.querySelector(".latest-push").innerHTML = log
       ? relativeDate(Math.floor(log.until / 1000000))
@@ -36,6 +36,7 @@ function update() {
 
   listStored()
   listQueued()
+  updateCollectionList()
 }
 
 async function listStored() {
@@ -48,6 +49,8 @@ async function listStored() {
   document.body.querySelector(".likes").innerHTML = likes
     .map(renderLike)
     .join("")
+
+  console.log("stored", likes)
 }
 
 function listQueued() {
@@ -148,4 +151,39 @@ window.searchByTags = async function() {
 window.searchByUrl = async function() {
   const results = await likedb.searchByUrl(prompt("Search by url"), 0, 10)
   console.log("result", results)
+}
+
+window.filterByCollection = async function() {}
+
+async function updateCollectionList() {
+  const colls = await likedb.listCollections()
+
+  const options = colls
+    .map(c => `<option value="${c.title}">${c.title}</option>`)
+    .join("\n")
+
+  document.body
+    .querySelector("select")
+    .addEventListener("change", window.onCollChange, false)
+
+  document.body.querySelector(
+    "select"
+  ).innerHTML = `<option value=''>Collections</option><option value=':create'>Create new</option>${options}`
+}
+
+window.onCollChange = async function(e) {
+  const el = e.target
+
+  if (el.value === "") {
+    return
+  }
+
+  if (el.value === ":create") {
+    await likedb.createCollection({
+      title: prompt("title"),
+      desc: prompt("desc")
+    })
+    updateCollectionList()
+    return
+  }
 }
