@@ -21,11 +21,15 @@ class CustomIndexedDBPull extends indexeddb_1.IndexedDBPull {
             const store = this.stores()[update.store];
             if (!store)
                 return callback(new Error("Unknown store: " + update.store));
+            if (update.store === "collections" && update.action !== "delete") {
+                update.doc = sanitize_1.sanitizeCollection(update.doc);
+                return _super.copyUpdate.call(this, update, callback);
+            }
             if (update.store !== "bookmarks") {
                 return _super.copyUpdate.call(this, update, callback);
             }
             if (update.action !== "delete") {
-                update.doc = sanitize_1.default(update.doc);
+                update.doc = sanitize_1.sanitizeBookmark(update.doc);
             }
             if (update.action !== "add") {
                 return _super.copyUpdate.call(this, update, callback);

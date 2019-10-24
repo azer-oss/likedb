@@ -48,4 +48,10 @@ export interface ICollectionLink {
     createdAt: number;
     updatedAt: number;
 }
+export interface ISpeedDial {
+    key: string;
+    url: string;
+    createdAt: number;
+    updatedAt: number;
+}
 export {};

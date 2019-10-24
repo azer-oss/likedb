@@ -12,7 +12,7 @@ export const db = (options?: IDBOptions): IDB => {
     options && options.testing ? "likedb-test-" + Date.now() : "likedb"
 
   dbref = indexeddb(dbname, {
-    version: (options && options.version) || 1
+    version: (options && options.version) || 2
   })
 
   return dbref as IDB
@@ -33,14 +33,21 @@ export const bookmarks = (options: IDBOptions) => {
 export const collections = (options: IDBOptions) => {
   return db().store("collections", {
     key: "title",
-    indexes: ["id", "desc", "createdAt"]
+    indexes: ["normalizedTitle", "desc", "createdAt"]
   })
 }
 
 export const collectionLinks = (options: IDBOptions) => {
   return db().store("collection-links", {
     key: "key",
-    indexes: ["collection", "createdAt"]
+    indexes: ["collection", "url", "createdAt"]
+  })
+}
+
+export const speedDial = (options: IDBOptions) => {
+  return db().store("speed-dial", {
+    key: "key",
+    indexes: ["key", "url", "createdAt"]
   })
 }
 

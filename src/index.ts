@@ -1,7 +1,12 @@
-import sanitize from "./sanitize"
+import { IDB, IStore } from "indexeddb"
+import * as anglicize from "anglicize"
+import {
+  sanitizeBookmark,
+  sanitizeCollection,
+  sanitizeSearchQuery
+} from "./sanitize"
 import * as storage from "./storage"
 import * as types from "./types"
-import { IDB, IStore } from "indexeddb"
 
 const DEFAULT_OFFSET = 0
 const DEFAULT_LIMIT = 10
@@ -12,18 +17,20 @@ export default class LikeDB {
   bookmarksStore: IStore
   collectionsStore: IStore
   collectionLinksStore: IStore
+  speedDialStore: IStore
 
   constructor(options?: types.IDBOptions) {
-    this.options = options || { version: 1 }
+    this.options = options || { version: 3 }
     this.db = storage.db(this.options)
     this.bookmarksStore = storage.bookmarks(this.options)
     this.collectionsStore = storage.collections(this.options)
     this.collectionLinksStore = storage.collectionLinks(this.options)
+    this.speedDialStore = storage.speedDial(this.options)
   }
 
   add(options: types.INewBookmark): Promise<any> {
     return this.bookmarksStore.add(
-      sanitize({
+      sanitizeBookmark({
         url: options.url,
         title: options.title || "",
         tags: options.tags || [],
@@ -97,20 +104,22 @@ export default class LikeDB {
     title: string
     desc: string
   }): Promise<types.ICollection> {
-    return this.collectionsStore.add({
-      id: Date.now(),
-      title,
-      desc,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    }) as Promise<types.ICollection>
+    return this.collectionsStore.add(
+      sanitizeCollection({
+        id: Date.now(),
+        title,
+        desc,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      })
+    ) as Promise<types.ICollection>
   }
 
   getCollection(title: string): Promise<types.ICollection> {
     return this.collectionsStore.get(title) as Promise<types.ICollection>
   }
 
-  async addToCollection({
+  addToCollection({
     collection,
     url,
     title,
@@ -121,12 +130,6 @@ export default class LikeDB {
     title: string
     desc: string
   }): Promise<types.ICollectionLink> {
-    const existing = await this.get(url)
-
-    if (!existing) {
-      await this.add({ url, title })
-    }
-
     return this.collectionLinksStore.add({
       key: `${collection}:${url}`,
       collection,
@@ -136,11 +139,88 @@ export default class LikeDB {
     }) as Promise<types.ICollectionLink>
   }
 
+  getCollectionsOfUrl(url: string): Promise<types.ICollection[]> {
+    const result: types.ICollectionLink[] = []
+
+    return new Promise((resolve, reject) => {
+      return this.collectionLinksStore.select(
+        "url",
+        { only: url },
+        async (err?: Error, row?: types.IDBRow<types.ICollectionLink>) => {
+          if (err) return reject(err)
+          if (!row) {
+            return resolve(
+              await Promise.all(
+                result
+                  .sort(sortCollByCreatedAt)
+                  .map(collectionLinkToCollection(this.collectionsStore))
+              )
+            )
+          }
+
+          result.push(row.value)
+          row.continue()
+        }
+      )
+    })
+  }
+
+  removeFromCollection(url: string, collection: string): Promise<object> {
+    return this.collectionLinksStore.delete(`${collection}:${url}`)
+  }
+
   listCollections(): Promise<types.ICollection[]> {
     const result: types.ICollection[] = []
 
     return new Promise((resolve, reject) => {
       this.collectionsStore.all(
+        (err?: Error, row?: types.IDBRow<types.ICollection>) => {
+          if (err) return reject(err)
+          if (!row) {
+            return resolve(result.sort(sortCollByCreatedAt))
+          }
+
+          result.push(row.value)
+          row.continue()
+        }
+      )
+    })
+  }
+
+  async getRecentCollections(): Promise<types.ICollection[]> {
+    const result: types.ICollectionLink[] = []
+    const recentlyCreatedColls = (await this.listCollections()).reverse()
+
+    return new Promise((resolve, reject) => {
+      this.collectionLinksStore.all(
+        async (err?: Error, row?: types.IDBRow<types.ICollectionLink>) => {
+          if (err) return reject(err)
+          if (!row) {
+            return resolve(
+              (await Promise.all(
+                result.map(collectionLinkToCollection(this.collectionsStore))
+              ))
+                .concat(await this.listCollections())
+                .filter(isUniqueCollection())
+            )
+          }
+
+          result.push(row.value)
+          row.continue()
+        }
+      )
+    })
+  }
+
+  searchCollections(query: string): Promise<types.ICollection[]> {
+    const result: types.ICollection[] = []
+    query = sanitizeSearchQuery(query)
+
+    return new Promise((resolve, reject) => {
+      this.collectionsStore.select(
+        "normalizedTitle",
+        { from: query, to: query + "\uffff" },
+        "prev",
         (err?: Error, row?: types.IDBRow<types.ICollection>) => {
           if (err) return reject(err)
           if (!row) {
@@ -168,11 +248,84 @@ export default class LikeDB {
         async (err?: Error, row?: types.IDBRow<types.ICollectionLink>) => {
           if (err) return reject(err)
           if (!row || result.length >= limit) {
-            return resolve(
-              await Promise.all(
-                result.sort(sortByCreatedAt).map(joinBookmarkAndLink(this))
-              )
-            )
+            return resolve(result.sort(sortByCreatedAt))
+          }
+
+          result.push(row.value)
+          row.continue()
+        }
+      )
+    })
+  }
+
+  addSpeedDial({
+    key,
+    url
+  }: {
+    key: string
+    url: string
+  }): Promise<types.ISpeedDial> {
+    return this.speedDialStore.add({
+      key,
+      url,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }) as Promise<types.ISpeedDial>
+  }
+
+  async updateSpeedDial({
+    key,
+    url
+  }: {
+    key: string
+    url: string
+  }): Promise<types.ISpeedDial> {
+    const existing = await this.speedDialStore.getByIndex("url", url)
+    await this.speedDialStore.delete(existing.key)
+
+    return this.speedDialStore.update({
+      key,
+      url,
+      createdAt: existing.createdAt,
+      updatedAt: Date.now()
+    }) as Promise<types.ISpeedDial>
+  }
+
+  removeSpeedDial(key: string): Promise<object> {
+    return this.speedDialStore.delete(key)
+  }
+
+  listSpeedDials(): Promise<types.ISpeedDial[]> {
+    const result: types.ISpeedDial[] = []
+
+    return new Promise((resolve, reject) => {
+      this.speedDialStore.all(
+        (err?: Error, row?: types.IDBRow<types.ISpeedDial>) => {
+          if (err) return reject(err)
+          if (!row) {
+            return resolve(result.sort(sortSpeedDialByCreatedAt))
+          }
+
+          result.push(row.value)
+          row.continue()
+        }
+      )
+    })
+  }
+
+  searchSpeedDials(query: string): Promise<types.ISpeedDial[]> {
+    const result: types.ISpeedDial[] = []
+    query = sanitizeSearchQuery(query)
+
+    return new Promise((resolve, reject) => {
+      this.speedDialStore.select(
+        "key",
+        { from: query, to: query + "\uffff" },
+        "prev",
+        (err?: Error, row?: types.IDBRow<types.ISpeedDial>) => {
+          if (err) return reject(err)
+          if (!row) {
+            return resolve(result.sort(sortSpeedDialByCreatedAt))
           }
 
           result.push(row.value)
@@ -257,7 +410,7 @@ export default class LikeDB {
       (row: types.IBookmark) => {
         row.title = title
         row.updatedAt = Date.now()
-        return this.bookmarksStore.update(sanitize(row))
+        return this.bookmarksStore.update(sanitizeBookmark(row))
       }
     )
   }
@@ -287,16 +440,6 @@ export default class LikeDB {
   }
 }
 
-function joinBookmarkAndLink(db: LikeDB) {
-  return async function(link: types.ICollectionLink) {
-    const b = await db.get(link.url)
-    return {
-      ...link,
-      title: b.title
-    }
-  }
-}
-
 function sortByCreatedAt(a: types.IBookmark, b: types.IBookmark): number {
   if (a.createdAt > b.createdAt) {
     return -1
@@ -322,4 +465,54 @@ function sortCollByCreatedAt(
   }
 
   return 0
+}
+
+function sortCollLinksByCreatedAt(
+  a: types.ICollection,
+  b: types.ICollection
+): number {
+  if (a.createdAt > b.createdAt) {
+    return 1
+  }
+
+  if (a.createdAt < b.createdAt) {
+    return -1
+  }
+
+  return 0
+}
+
+function sortSpeedDialByCreatedAt(
+  a: types.ISpeedDial,
+  b: types.ISpeedDial
+): number {
+  if (a.createdAt < b.createdAt) {
+    return 1
+  }
+
+  if (a.createdAt > b.createdAt) {
+    return -1
+  }
+
+  return 0
+}
+
+function isUniqueCollection() {
+  const mem = {}
+
+  return function(coll: types.ICollection): boolean {
+    if (mem[coll.title]) {
+      return false
+    }
+
+    mem[coll.title] = true
+
+    return true
+  }
+}
+
+function collectionLinkToCollection(collectionsStore: IStore) {
+  return function(cl: types.ICollectionLink) {
+    return collectionsStore.get(cl.collection) as Promise<types.ICollection>
+  }
 }

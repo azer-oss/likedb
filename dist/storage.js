@@ -8,7 +8,7 @@ exports.db = (options) => {
     }
     const dbname = options && options.testing ? "likedb-test-" + Date.now() : "likedb";
     dbref = indexeddb_1.default(dbname, {
-        version: (options && options.version) || 1
+        version: (options && options.version) || 2
     });
     return dbref;
 };
@@ -26,13 +26,19 @@ exports.bookmarks = (options) => {
 exports.collections = (options) => {
     return exports.db().store("collections", {
         key: "title",
-        indexes: ["id", "desc", "createdAt"]
+        indexes: ["normalizedTitle", "desc", "createdAt"]
     });
 };
 exports.collectionLinks = (options) => {
     return exports.db().store("collection-links", {
         key: "key",
-        indexes: ["collection", "createdAt"]
+        indexes: ["collection", "url", "createdAt"]
+    });
+};
+exports.speedDial = (options) => {
+    return exports.db().store("speed-dial", {
+        key: "key",
+        indexes: ["key", "url", "createdAt"]
     });
 };
 function reset() {

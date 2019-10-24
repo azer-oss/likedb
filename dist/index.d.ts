@@ -1,11 +1,12 @@
-import * as types from "./types";
 import { IDB, IStore } from "indexeddb";
+import * as types from "./types";
 export default class LikeDB {
     options: types.IDBOptions;
     db: IDB;
     bookmarksStore: IStore;
     collectionsStore: IStore;
     collectionLinksStore: IStore;
+    speedDialStore: IStore;
     constructor(options?: types.IDBOptions);
     add(options: types.INewBookmark): Promise<any>;
     count(): Promise<number>;
@@ -24,8 +25,23 @@ export default class LikeDB {
         title: string;
         desc: string;
     }): Promise<types.ICollectionLink>;
+    getCollectionsOfUrl(url: string): Promise<types.ICollection[]>;
+    removeFromCollection(url: string, collection: string): Promise<object>;
     listCollections(): Promise<types.ICollection[]>;
+    getRecentCollections(): Promise<types.ICollection[]>;
+    searchCollections(query: string): Promise<types.ICollection[]>;
     listByCollection(collection: string, options?: types.IListOptions): Promise<types.ICollectionLink[]>;
+    addSpeedDial({ key, url }: {
+        key: string;
+        url: string;
+    }): Promise<types.ISpeedDial>;
+    updateSpeedDial({ key, url }: {
+        key: string;
+        url: string;
+    }): Promise<types.ISpeedDial>;
+    removeSpeedDial(key: string): Promise<object>;
+    listSpeedDials(): Promise<types.ISpeedDial[]>;
+    searchSpeedDials(query: string): Promise<types.ISpeedDial[]>;
     search(index: string, keyword: string, options?: types.IListOptions): Promise<types.IBookmark[]>;
     searchByTags(keyword: string, options: types.IListOptions): Promise<types.IBookmark[]>;
     searchByTitle(keyword: string, options: types.IListOptions): Promise<types.IBookmark[]>;

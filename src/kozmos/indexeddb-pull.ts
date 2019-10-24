@@ -1,5 +1,6 @@
 import { IndexedDBPull, types as idbTypes } from "indexeddb"
-import sanitize from "../sanitize"
+import * as anglicize from "anglicize"
+import { sanitizeBookmark, sanitizeCollection } from "../sanitize"
 import * as types from "./types"
 
 // Receives updates from other sources
@@ -8,12 +9,17 @@ export default class CustomIndexedDBPull extends IndexedDBPull {
     const store = this.stores()[update.store]
     if (!store) return callback(new Error("Unknown store: " + update.store))
 
+    if (update.store === "collections" && update.action !== "delete") {
+      update.doc = sanitizeCollection(update.doc)
+      return super.copyUpdate(update, callback)
+    }
+
     if (update.store !== "bookmarks") {
       return super.copyUpdate(update, callback)
     }
 
     if (update.action !== "delete") {
-      update.doc = sanitize(update.doc)
+      update.doc = sanitizeBookmark(update.doc)
     }
 
     if (update.action !== "add") {

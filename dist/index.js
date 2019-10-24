@@ -15,14 +15,15 @@ const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 10;
 class LikeDB {
     constructor(options) {
-        this.options = options || { version: 1 };
+        this.options = options || { version: 3 };
         this.db = storage.db(this.options);
         this.bookmarksStore = storage.bookmarks(this.options);
         this.collectionsStore = storage.collections(this.options);
         this.collectionLinksStore = storage.collectionLinks(this.options);
+        this.speedDialStore = storage.speedDial(this.options);
     }
     add(options) {
-        return this.bookmarksStore.add(sanitize_1.default({
+        return this.bookmarksStore.add(sanitize_1.sanitizeBookmark({
             url: options.url,
             title: options.title || "",
             tags: options.tags || [],
@@ -69,36 +70,83 @@ class LikeDB {
         });
     }
     createCollection({ title, desc }) {
-        return this.collectionsStore.add({
+        return this.collectionsStore.add(sanitize_1.sanitizeCollection({
             id: Date.now(),
             title,
             desc,
             createdAt: Date.now(),
             updatedAt: Date.now()
-        });
+        }));
     }
     getCollection(title) {
         return this.collectionsStore.get(title);
     }
     addToCollection({ collection, url, title, desc }) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const existing = yield this.get(url);
-            if (!existing) {
-                yield this.add({ url, title });
-            }
-            return this.collectionLinksStore.add({
-                key: `${collection}:${url}`,
-                collection,
-                url,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            });
+        return this.collectionLinksStore.add({
+            key: `${collection}:${url}`,
+            collection,
+            url,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
         });
+    }
+    getCollectionsOfUrl(url) {
+        const result = [];
+        return new Promise((resolve, reject) => {
+            return this.collectionLinksStore.select("url", { only: url }, (err, row) => __awaiter(this, void 0, void 0, function* () {
+                if (err)
+                    return reject(err);
+                if (!row) {
+                    return resolve(yield Promise.all(result
+                        .sort(sortCollByCreatedAt)
+                        .map(collectionLinkToCollection(this.collectionsStore))));
+                }
+                result.push(row.value);
+                row.continue();
+            }));
+        });
+    }
+    removeFromCollection(url, collection) {
+        return this.collectionLinksStore.delete(`${collection}:${url}`);
     }
     listCollections() {
         const result = [];
         return new Promise((resolve, reject) => {
             this.collectionsStore.all((err, row) => {
+                if (err)
+                    return reject(err);
+                if (!row) {
+                    return resolve(result.sort(sortCollByCreatedAt));
+                }
+                result.push(row.value);
+                row.continue();
+            });
+        });
+    }
+    getRecentCollections() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const result = [];
+            const recentlyCreatedColls = (yield this.listCollections()).reverse();
+            return new Promise((resolve, reject) => {
+                this.collectionLinksStore.all((err, row) => __awaiter(this, void 0, void 0, function* () {
+                    if (err)
+                        return reject(err);
+                    if (!row) {
+                        return resolve((yield Promise.all(result.map(collectionLinkToCollection(this.collectionsStore))))
+                            .concat(yield this.listCollections())
+                            .filter(isUniqueCollection()));
+                    }
+                    result.push(row.value);
+                    row.continue();
+                }));
+            });
+        });
+    }
+    searchCollections(query) {
+        const result = [];
+        query = sanitize_1.sanitizeSearchQuery(query);
+        return new Promise((resolve, reject) => {
+            this.collectionsStore.select("normalizedTitle", { from: query, to: query + "\uffff" }, "prev", (err, row) => {
                 if (err)
                     return reject(err);
                 if (!row) {
@@ -117,11 +165,63 @@ class LikeDB {
                 if (err)
                     return reject(err);
                 if (!row || result.length >= limit) {
-                    return resolve(yield Promise.all(result.sort(sortByCreatedAt).map(joinBookmarkAndLink(this))));
+                    return resolve(result.sort(sortByCreatedAt));
                 }
                 result.push(row.value);
                 row.continue();
             }));
+        });
+    }
+    addSpeedDial({ key, url }) {
+        return this.speedDialStore.add({
+            key,
+            url,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        });
+    }
+    updateSpeedDial({ key, url }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const existing = yield this.speedDialStore.getByIndex("url", url);
+            yield this.speedDialStore.delete(existing.key);
+            return this.speedDialStore.update({
+                key,
+                url,
+                createdAt: existing.createdAt,
+                updatedAt: Date.now()
+            });
+        });
+    }
+    removeSpeedDial(key) {
+        return this.speedDialStore.delete(key);
+    }
+    listSpeedDials() {
+        const result = [];
+        return new Promise((resolve, reject) => {
+            this.speedDialStore.all((err, row) => {
+                if (err)
+                    return reject(err);
+                if (!row) {
+                    return resolve(result.sort(sortSpeedDialByCreatedAt));
+                }
+                result.push(row.value);
+                row.continue();
+            });
+        });
+    }
+    searchSpeedDials(query) {
+        const result = [];
+        query = sanitize_1.sanitizeSearchQuery(query);
+        return new Promise((resolve, reject) => {
+            this.speedDialStore.select("key", { from: query, to: query + "\uffff" }, "prev", (err, row) => {
+                if (err)
+                    return reject(err);
+                if (!row) {
+                    return resolve(result.sort(sortSpeedDialByCreatedAt));
+                }
+                result.push(row.value);
+                row.continue();
+            });
         });
     }
     search(index, keyword, options) {
@@ -166,7 +266,7 @@ class LikeDB {
         return this.bookmarksStore.get(url).then((row) => {
             row.title = title;
             row.updatedAt = Date.now();
-            return this.bookmarksStore.update(sanitize_1.default(row));
+            return this.bookmarksStore.update(sanitize_1.sanitizeBookmark(row));
         });
     }
     tag(url, tag) {
@@ -189,14 +289,6 @@ class LikeDB {
     }
 }
 exports.default = LikeDB;
-function joinBookmarkAndLink(db) {
-    return function (link) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const b = yield db.get(link.url);
-            return Object.assign(Object.assign({}, link), { title: b.title });
-        });
-    };
-}
 function sortByCreatedAt(a, b) {
     if (a.createdAt > b.createdAt) {
         return -1;
@@ -214,4 +306,37 @@ function sortCollByCreatedAt(a, b) {
         return 1;
     }
     return 0;
+}
+function sortCollLinksByCreatedAt(a, b) {
+    if (a.createdAt > b.createdAt) {
+        return 1;
+    }
+    if (a.createdAt < b.createdAt) {
+        return -1;
+    }
+    return 0;
+}
+function sortSpeedDialByCreatedAt(a, b) {
+    if (a.createdAt < b.createdAt) {
+        return 1;
+    }
+    if (a.createdAt > b.createdAt) {
+        return -1;
+    }
+    return 0;
+}
+function isUniqueCollection() {
+    const mem = {};
+    return function (coll) {
+        if (mem[coll.title]) {
+            return false;
+        }
+        mem[coll.title] = true;
+        return true;
+    };
+}
+function collectionLinkToCollection(collectionsStore) {
+    return function (cl) {
+        return collectionsStore.get(cl.collection);
+    };
 }
