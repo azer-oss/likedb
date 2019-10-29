@@ -21,26 +21,25 @@ class CustomIndexedDBPull extends indexeddb_1.IndexedDBPull {
             const store = this.stores()[update.store];
             if (!store)
                 return callback(new Error("Unknown store: " + update.store));
+            if (yield shouldBeAnUpdateAction(store, update)) {
+                update.action = "update";
+            }
             if (update.store === "collections" && update.action !== "delete") {
                 update.doc = sanitize_1.sanitizeCollection(update.doc);
-                return _super.copyUpdate.call(this, update, callback);
             }
-            if (update.store !== "bookmarks") {
-                return _super.copyUpdate.call(this, update, callback);
-            }
-            if (update.action !== "delete") {
+            if (update.store === "bookmarks" && update.action !== "delete") {
                 update.doc = sanitize_1.sanitizeBookmark(update.doc);
             }
-            if (update.action !== "add") {
-                return _super.copyUpdate.call(this, update, callback);
-            }
-            store.get(update.documentId, (err, result) => {
-                if (!err && result) {
-                    update.action = "update";
-                }
-                return _super.copyUpdate.call(this, update, callback);
-            });
+            return _super.copyUpdate.call(this, update, callback);
         });
     }
 }
 exports.default = CustomIndexedDBPull;
+function shouldBeAnUpdateAction(store, update) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (update.action !== "add")
+            return false;
+        const existing = yield store.get(update.documentId);
+        return !!existing;
+    });
+}

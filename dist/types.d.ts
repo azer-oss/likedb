@@ -26,6 +26,7 @@ export interface IBookmarkWithTags {
 export interface IListOptions {
     limit?: number;
     offset?: number;
+    filter: string;
 }
 export interface IDBRow<T> {
     continue: () => void;

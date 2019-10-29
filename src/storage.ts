@@ -1,5 +1,6 @@
 import { default as indexeddb, IDB, IStore } from "indexeddb"
 import { IDBOptions } from "./types"
+import version from "./version"
 
 let dbref: IDB | null = null
 
@@ -12,7 +13,7 @@ export const db = (options?: IDBOptions): IDB => {
     options && options.testing ? "likedb-test-" + Date.now() : "likedb"
 
   dbref = indexeddb(dbname, {
-    version: (options && options.version) || 2
+    version: (options && options.version) || version
   })
 
   return dbref as IDB
@@ -45,6 +46,7 @@ export const collectionLinks = (options: IDBOptions) => {
 }
 
 export const speedDial = (options: IDBOptions) => {
+  console.log("store speed dial")
   return db().store("speed-dial", {
     key: "key",
     indexes: ["key", "url", "createdAt"]

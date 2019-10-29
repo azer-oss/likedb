@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const indexeddb_1 = require("indexeddb");
+const version_1 = require("./version");
 let dbref = null;
 exports.db = (options) => {
     if (dbref !== null) {
@@ -8,7 +9,7 @@ exports.db = (options) => {
     }
     const dbname = options && options.testing ? "likedb-test-" + Date.now() : "likedb";
     dbref = indexeddb_1.default(dbname, {
-        version: (options && options.version) || 2
+        version: (options && options.version) || version_1.default
     });
     return dbref;
 };
@@ -36,6 +37,7 @@ exports.collectionLinks = (options) => {
     });
 };
 exports.speedDial = (options) => {
+    console.log("store speed dial");
     return exports.db().store("speed-dial", {
         key: "key",
         indexes: ["key", "url", "createdAt"]

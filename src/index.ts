@@ -7,6 +7,7 @@ import {
 } from "./sanitize"
 import * as storage from "./storage"
 import * as types from "./types"
+import version from "./version"
 
 const DEFAULT_OFFSET = 0
 const DEFAULT_LIMIT = 10
@@ -20,7 +21,7 @@ export default class LikeDB {
   speedDialStore: IStore
 
   constructor(options?: types.IDBOptions) {
-    this.options = options || { version: 3 }
+    this.options = options || { version }
     this.db = storage.db(this.options)
     this.bookmarksStore = storage.bookmarks(this.options)
     this.collectionsStore = storage.collections(this.options)
@@ -119,7 +120,7 @@ export default class LikeDB {
     return this.collectionsStore.get(title) as Promise<types.ICollection>
   }
 
-  addToCollection({
+  async addToCollection({
     collection,
     url,
     title,
@@ -130,6 +131,11 @@ export default class LikeDB {
     title: string
     desc: string
   }): Promise<types.ICollectionLink> {
+    const coll = await this.getCollection(collection)
+    if (!coll) {
+      await this.createCollection({ title: collection, desc: "" })
+    }
+
     return this.collectionLinksStore.add({
       key: `${collection}:${url}`,
       collection,
@@ -239,7 +245,12 @@ export default class LikeDB {
     options?: types.IListOptions
   ): Promise<types.ICollectionLink[]> {
     const result: types.ICollectionLink[] = []
+    const offset: number = options && options.offset ? options.offset : 0
     const limit: number = options && options.limit ? options.limit : 25
+    const filter: string =
+      (options && options.filter && options.filter.trim()) || ""
+
+    let index = 0
 
     return new Promise((resolve, reject) => {
       this.collectionLinksStore.select(
@@ -247,11 +258,18 @@ export default class LikeDB {
         { only: collection },
         async (err?: Error, row?: types.IDBRow<types.ICollectionLink>) => {
           if (err) return reject(err)
+
           if (!row || result.length >= limit) {
             return resolve(result.sort(sortByCreatedAt))
           }
 
+          if (offset > 0 && index < offset) {
+            return row.continue()
+          }
+
           result.push(row.value)
+
+          index += 1
           row.continue()
         }
       )
@@ -271,6 +289,15 @@ export default class LikeDB {
       createdAt: Date.now(),
       updatedAt: Date.now()
     }) as Promise<types.ISpeedDial>
+  }
+
+  getSpeedDialByKey(key: string): Promise<types.ISpeedDial> {
+    return this.speedDialStore.get(key) as Promise<types.ISpeedDial>
+  }
+
+  async getSpeedDialByUrl(url: string): Promise<types.ISpeedDial> {
+    const existing = await this.speedDialStore.getByIndex("url", url)
+    return existing
   }
 
   async updateSpeedDial({
@@ -293,6 +320,15 @@ export default class LikeDB {
 
   removeSpeedDial(key: string): Promise<object> {
     return this.speedDialStore.delete(key)
+  }
+
+  async removeSpeedDialByUrl(url: string): Promise<object> {
+    const current = await this.getSpeedDialByUrl(url)
+    if (!current) {
+      return {}
+    }
+
+    return this.speedDialStore.delete(current.key)
   }
 
   listSpeedDials(): Promise<types.ISpeedDial[]> {

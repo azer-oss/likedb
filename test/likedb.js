@@ -140,7 +140,6 @@ test("collections/links", async t => {
 
   await db.removeFromCollection("https://span.com", "berlin")
   colls = await db.getCollectionsOfUrl("https://span.com", "berlin")
-  console.log("@", colls)
   t.equal(colls.length, 0)
 
   await purgeDB(db)
@@ -268,6 +267,13 @@ test("speed dial", async t => {
   await db.addSpeedDial({ key: "wiki", url: "https://en.wikipedia.org" })
   await db.addSpeedDial({ key: "go", url: "https://golang.org/doc/" })
 
+  t.equal((await db.getSpeedDialByUrl("https://golang.org/doc/")).key, "go")
+  t.equal(
+    (await db.getSpeedDialByUrl("https://news.ycombinator.com")).key,
+    "hn"
+  )
+  t.equal((await db.getSpeedDialByUrl("https://en.wikipedia.org")).key, "wiki")
+
   const speedDials = await db.listSpeedDials()
   t.equal(speedDials.length, 3)
   t.equal(speedDials[2].key, "hn")
@@ -277,8 +283,9 @@ test("speed dial", async t => {
   t.equal(speedDials[0].key, "go")
   t.equal(speedDials[0].url, "https://golang.org/doc/")
 
-  console.log("1", speedDials[1].createdAt - speedDials[0].createdAt)
-  console.log("2", speedDials[2].createdAt - speedDials[1].createdAt)
+  const hn = await db.getSpeedDialByKey("hn")
+  t.equal(hn.key, "hn")
+  t.equal(hn.url, "https://news.ycombinator.com")
 
   const searchResults = await db.searchSpeedDials("WI")
   t.equal(searchResults.length, 1)

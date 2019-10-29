@@ -35,11 +35,14 @@ export default class LikeDB {
         key: string;
         url: string;
     }): Promise<types.ISpeedDial>;
+    getSpeedDialByKey(key: string): Promise<types.ISpeedDial>;
+    getSpeedDialByUrl(url: string): Promise<types.ISpeedDial>;
     updateSpeedDial({ key, url }: {
         key: string;
         url: string;
     }): Promise<types.ISpeedDial>;
     removeSpeedDial(key: string): Promise<object>;
+    removeSpeedDialByUrl(url: string): Promise<object>;
     listSpeedDials(): Promise<types.ISpeedDial[]>;
     searchSpeedDials(query: string): Promise<types.ISpeedDial[]>;
     search(index: string, keyword: string, options?: types.IListOptions): Promise<types.IBookmark[]>;

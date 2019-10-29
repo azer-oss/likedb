@@ -11,11 +11,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const sanitize_1 = require("./sanitize");
 const storage = require("./storage");
+const version_1 = require("./version");
 const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 10;
 class LikeDB {
     constructor(options) {
-        this.options = options || { version: 3 };
+        this.options = options || { version: version_1.default };
         this.db = storage.db(this.options);
         this.bookmarksStore = storage.bookmarks(this.options);
         this.collectionsStore = storage.collections(this.options);
@@ -82,12 +83,18 @@ class LikeDB {
         return this.collectionsStore.get(title);
     }
     addToCollection({ collection, url, title, desc }) {
-        return this.collectionLinksStore.add({
-            key: `${collection}:${url}`,
-            collection,
-            url,
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+        return __awaiter(this, void 0, void 0, function* () {
+            const coll = yield this.getCollection(collection);
+            if (!coll) {
+                yield this.createCollection({ title: collection, desc: "" });
+            }
+            return this.collectionLinksStore.add({
+                key: `${collection}:${url}`,
+                collection,
+                url,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
         });
     }
     getCollectionsOfUrl(url) {
@@ -159,7 +166,10 @@ class LikeDB {
     }
     listByCollection(collection, options) {
         const result = [];
+        const offset = options && options.offset ? options.offset : 0;
         const limit = options && options.limit ? options.limit : 25;
+        const filter = (options && options.filter && options.filter.trim()) || "";
+        let index = 0;
         return new Promise((resolve, reject) => {
             this.collectionLinksStore.select("collection", { only: collection }, (err, row) => __awaiter(this, void 0, void 0, function* () {
                 if (err)
@@ -167,7 +177,11 @@ class LikeDB {
                 if (!row || result.length >= limit) {
                     return resolve(result.sort(sortByCreatedAt));
                 }
+                if (offset > 0 && index < offset) {
+                    return row.continue();
+                }
                 result.push(row.value);
+                index += 1;
                 row.continue();
             }));
         });
@@ -178,6 +192,15 @@ class LikeDB {
             url,
             createdAt: Date.now(),
             updatedAt: Date.now()
+        });
+    }
+    getSpeedDialByKey(key) {
+        return this.speedDialStore.get(key);
+    }
+    getSpeedDialByUrl(url) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const existing = yield this.speedDialStore.getByIndex("url", url);
+            return existing;
         });
     }
     updateSpeedDial({ key, url }) {
@@ -194,6 +217,15 @@ class LikeDB {
     }
     removeSpeedDial(key) {
         return this.speedDialStore.delete(key);
+    }
+    removeSpeedDialByUrl(url) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const current = yield this.getSpeedDialByUrl(url);
+            if (!current) {
+                return {};
+            }
+            return this.speedDialStore.delete(current.key);
+        });
     }
     listSpeedDials() {
         const result = [];

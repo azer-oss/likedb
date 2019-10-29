@@ -9,29 +9,28 @@ export default class CustomIndexedDBPull extends IndexedDBPull {
     const store = this.stores()[update.store]
     if (!store) return callback(new Error("Unknown store: " + update.store))
 
+    if (await shouldBeAnUpdateAction(store, update)) {
+      update.action = "update"
+    }
+
     if (update.store === "collections" && update.action !== "delete") {
       update.doc = sanitizeCollection(update.doc)
-      return super.copyUpdate(update, callback)
     }
 
-    if (update.store !== "bookmarks") {
-      return super.copyUpdate(update, callback)
-    }
-
-    if (update.action !== "delete") {
+    if (update.store === "bookmarks" && update.action !== "delete") {
       update.doc = sanitizeBookmark(update.doc)
     }
 
-    if (update.action !== "add") {
-      return super.copyUpdate(update, callback)
-    }
-
-    store.get(update.documentId, (err, result) => {
-      if (!err && result) {
-        update.action = "update"
-      }
-
-      return super.copyUpdate(update, callback)
-    })
+    return super.copyUpdate(update, callback)
   }
+}
+
+async function shouldBeAnUpdateAction(
+  store: idbTypes.IStore,
+  update: idbTypes.IUpdate
+): Promise<boolean> {
+  if (update.action !== "add") return false
+
+  const existing = await store.get(update.documentId)
+  return !!existing
 }
