@@ -104,7 +104,7 @@ export default class LikeDB {
   }: {
     title: string
     desc: string
-  }): Promise<types.ICollection> {
+  }): Promise<string | object> {
     return this.collectionsStore.add(
       sanitizeCollection({
         id: Date.now(),
@@ -113,7 +113,48 @@ export default class LikeDB {
         createdAt: Date.now(),
         updatedAt: Date.now()
       })
-    ) as Promise<types.ICollection>
+    ) as Promise<string | object>
+  }
+
+  async updateCollection(
+    titleToUpdate: string,
+    { title, desc }: { title: string; desc: string }
+  ) {
+    const collection = await this.createCollection({ title, desc })
+    const links = await this.listByCollection(titleToUpdate, { limit: 99999 })
+
+    await Promise.all(
+      links.map(link =>
+        this.addToCollection({
+          ...link,
+          collection: collection as string
+        })
+      )
+    )
+
+    await this.removeCollection(titleToUpdate)
+  }
+
+  async updateCollectionImage(title: string, imageUrl: string) {
+    const existing = (await this.collectionsStore.get(
+      title
+    )) as types.ICollection
+
+    return this.collectionsStore.update({
+      ...existing,
+      imageUrl,
+      updatedAt: Date.now()
+    }) as Promise<types.ISpeedDial>
+  }
+
+  async removeCollection(title: string) {
+    const links = await this.listByCollection(title, { limit: 99999 })
+
+    await Promise.all(
+      links.map(link => this.removeFromCollection(link.url, title))
+    )
+
+    await this.collectionsStore.delete(title)
   }
 
   getCollection(title: string): Promise<types.ICollection> {
@@ -124,14 +165,19 @@ export default class LikeDB {
     collection,
     url,
     title,
-    desc
+    desc,
+    createdAt,
+    updatedAt
   }: {
     collection: string
     url: string
     title: string
     desc: string
+    createdAt?: number
+    updatedAt?: number
   }): Promise<types.ICollectionLink> {
     const coll = await this.getCollection(collection)
+
     if (!coll) {
       await this.createCollection({ title: collection, desc: "" })
     }
@@ -140,8 +186,8 @@ export default class LikeDB {
       key: `${collection}:${url}`,
       collection,
       url,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
+      createdAt: createdAt || Date.now(),
+      updatedAt: updatedAt || Date.now()
     }) as Promise<types.ICollectionLink>
   }
 
@@ -244,7 +290,44 @@ export default class LikeDB {
     collection: string,
     options?: types.IListOptions
   ): Promise<types.ICollectionLink[]> {
+    const all: types.ICollectionLink[] = []
     const result: types.ICollectionLink[] = []
+
+    const offset: number = options && options.offset ? options.offset : 0
+    const limit: number = options && options.limit ? options.limit : 25
+    const filter: string =
+      (options && options.filter && options.filter.trim()) || ""
+
+    let index = 0
+
+    return new Promise((resolve, reject) => {
+      this.collectionLinksStore.select(
+        "createdAt",
+        null,
+        "prev",
+        async (err?: Error, row?: types.IDBRow<types.ICollectionLink>) => {
+          if (err) return reject(err)
+
+          if (!row || result.length >= limit) {
+            return resolve(result.sort(sortByCreatedAt))
+          }
+
+          if (offset > 0 && index < offset) {
+            index += 1
+            return row.continue()
+          }
+
+          if (row.value.collection === collection) {
+            result.push(row.value)
+          }
+
+          index += 1
+          row.continue()
+        }
+      )
+    })
+
+    /*const result: types.ICollectionLink[] = []
     const offset: number = options && options.offset ? options.offset : 0
     const limit: number = options && options.limit ? options.limit : 25
     const filter: string =
@@ -273,7 +356,7 @@ export default class LikeDB {
           row.continue()
         }
       )
-    })
+    })*/
   }
 
   addSpeedDial({
@@ -441,14 +524,11 @@ export default class LikeDB {
     })
   }
 
-  updateTitle(url: string, title: string): Promise<any> {
-    return (this.bookmarksStore.get(url) as Promise<types.IBookmark>).then(
-      (row: types.IBookmark) => {
-        row.title = title
-        row.updatedAt = Date.now()
-        return this.bookmarksStore.update(sanitizeBookmark(row))
-      }
-    )
+  async updateTitle(url: string, title: string): Promise<any> {
+    const row = (await this.bookmarksStore.get(url)) as types.IBookmark
+    row.title = title
+    row.updatedAt = Date.now()
+    return this.bookmarksStore.update(sanitizeBookmark(row))
   }
 
   tag(url: string, tag: string): Promise<any> {

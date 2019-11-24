@@ -1,5 +1,5 @@
 import indexeddb from "indexeddb"
 
-export default indexeddb("likedb-sync-v2", {
+export default indexeddb("sync", {
   version: 1
 })

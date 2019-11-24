@@ -79,10 +79,31 @@ class LikeDB {
             updatedAt: Date.now()
         }));
     }
+    updateCollection(titleToUpdate, { title, desc }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const collection = yield this.createCollection({ title, desc });
+            const links = yield this.listByCollection(titleToUpdate, { limit: 99999 });
+            yield Promise.all(links.map(link => this.addToCollection(Object.assign(Object.assign({}, link), { collection: collection }))));
+            yield this.removeCollection(titleToUpdate);
+        });
+    }
+    updateCollectionImage(title, imageUrl) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const existing = (yield this.collectionsStore.get(title));
+            return this.collectionsStore.update(Object.assign(Object.assign({}, existing), { imageUrl, updatedAt: Date.now() }));
+        });
+    }
+    removeCollection(title) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const links = yield this.listByCollection(title, { limit: 99999 });
+            yield Promise.all(links.map(link => this.removeFromCollection(link.url, title)));
+            yield this.collectionsStore.delete(title);
+        });
+    }
     getCollection(title) {
         return this.collectionsStore.get(title);
     }
-    addToCollection({ collection, url, title, desc }) {
+    addToCollection({ collection, url, title, desc, createdAt, updatedAt }) {
         return __awaiter(this, void 0, void 0, function* () {
             const coll = yield this.getCollection(collection);
             if (!coll) {
@@ -92,8 +113,8 @@ class LikeDB {
                 key: `${collection}:${url}`,
                 collection,
                 url,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
+                createdAt: createdAt || Date.now(),
+                updatedAt: updatedAt || Date.now()
             });
         });
     }
@@ -165,26 +186,60 @@ class LikeDB {
         });
     }
     listByCollection(collection, options) {
+        const all = [];
         const result = [];
         const offset = options && options.offset ? options.offset : 0;
         const limit = options && options.limit ? options.limit : 25;
         const filter = (options && options.filter && options.filter.trim()) || "";
         let index = 0;
         return new Promise((resolve, reject) => {
-            this.collectionLinksStore.select("collection", { only: collection }, (err, row) => __awaiter(this, void 0, void 0, function* () {
+            this.collectionLinksStore.select("createdAt", null, "prev", (err, row) => __awaiter(this, void 0, void 0, function* () {
                 if (err)
                     return reject(err);
                 if (!row || result.length >= limit) {
                     return resolve(result.sort(sortByCreatedAt));
                 }
                 if (offset > 0 && index < offset) {
+                    index += 1;
                     return row.continue();
                 }
-                result.push(row.value);
+                if (row.value.collection === collection) {
+                    result.push(row.value);
+                }
                 index += 1;
                 row.continue();
             }));
         });
+        /*const result: types.ICollectionLink[] = []
+        const offset: number = options && options.offset ? options.offset : 0
+        const limit: number = options && options.limit ? options.limit : 25
+        const filter: string =
+          (options && options.filter && options.filter.trim()) || ""
+    
+        let index = 0
+    
+        return new Promise((resolve, reject) => {
+          this.collectionLinksStore.select(
+            "collection",
+            { only: collection },
+            async (err?: Error, row?: types.IDBRow<types.ICollectionLink>) => {
+              if (err) return reject(err)
+    
+              if (!row || result.length >= limit) {
+                return resolve(result.sort(sortByCreatedAt))
+              }
+    
+              if (offset > 0 && index < offset) {
+                return row.continue()
+              }
+    
+              result.push(row.value)
+    
+              index += 1
+              row.continue()
+            }
+          )
+        })*/
     }
     addSpeedDial({ key, url }) {
         return this.speedDialStore.add({
@@ -295,7 +350,8 @@ class LikeDB {
         });
     }
     updateTitle(url, title) {
-        return this.bookmarksStore.get(url).then((row) => {
+        return __awaiter(this, void 0, void 0, function* () {
+            const row = (yield this.bookmarksStore.get(url));
             row.title = title;
             row.updatedAt = Date.now();
             return this.bookmarksStore.update(sanitize_1.sanitizeBookmark(row));

@@ -138,7 +138,25 @@ test("collections/links", async t => {
   t.equal(recentColls[1].title, "madrid")
   t.equal(recentColls[2].title, "london")
 
-  await db.removeFromCollection("https://span.com", "berlin")
+  await db.updateCollection("berlin", { title: "koti" })
+
+  links = await db.listByCollection("koti")
+  t.equal(links.length, 3)
+  t.equal(links[2].url, "https://foobar.com")
+  t.equal(links[1].url, "https://span.com")
+  t.equal(links[0].url, "https://eggs.com")
+
+  links = await db.listByCollection("berlin")
+  t.equal(links.length, 0)
+
+  recentColls = await db.getRecentCollections()
+  t.equal(recentColls.length, 3)
+  t.equal(recentColls[0].title, "koti")
+  t.equal(recentColls[1].title, "madrid")
+  t.equal(recentColls[2].title, "london")
+
+  const coll = await db.removeFromCollection("https://span.com", "koti")
+
   colls = await db.getCollectionsOfUrl("https://span.com", "berlin")
   t.equal(colls.length, 0)
 

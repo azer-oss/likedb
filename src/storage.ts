@@ -10,7 +10,7 @@ export const db = (options?: IDBOptions): IDB => {
   }
 
   const dbname =
-    options && options.testing ? "likedb-test-" + Date.now() : "likedb"
+    options && options.testing ? "kozmos-test-" + Date.now() : "kozmos"
 
   dbref = indexeddb(dbname, {
     version: (options && options.version) || version
@@ -46,7 +46,6 @@ export const collectionLinks = (options: IDBOptions) => {
 }
 
 export const speedDial = (options: IDBOptions) => {
-  console.log("store speed dial")
   return db().store("speed-dial", {
     key: "key",
     indexes: ["key", "url", "createdAt"]

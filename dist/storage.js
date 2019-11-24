@@ -7,7 +7,7 @@ exports.db = (options) => {
     if (dbref !== null) {
         return dbref;
     }
-    const dbname = options && options.testing ? "likedb-test-" + Date.now() : "likedb";
+    const dbname = options && options.testing ? "kozmos-test-" + Date.now() : "kozmos";
     dbref = indexeddb_1.default(dbname, {
         version: (options && options.version) || version_1.default
     });
@@ -37,7 +37,6 @@ exports.collectionLinks = (options) => {
     });
 };
 exports.speedDial = (options) => {
-    console.log("store speed dial");
     return exports.db().store("speed-dial", {
         key: "key",
         indexes: ["key", "url", "createdAt"]

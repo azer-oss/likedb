@@ -17,13 +17,21 @@ export default class LikeDB {
     createCollection({ title, desc }: {
         title: string;
         desc: string;
-    }): Promise<types.ICollection>;
+    }): Promise<string | object>;
+    updateCollection(titleToUpdate: string, { title, desc }: {
+        title: string;
+        desc: string;
+    }): Promise<void>;
+    updateCollectionImage(title: string, imageUrl: string): Promise<types.ISpeedDial>;
+    removeCollection(title: string): Promise<void>;
     getCollection(title: string): Promise<types.ICollection>;
-    addToCollection({ collection, url, title, desc }: {
+    addToCollection({ collection, url, title, desc, createdAt, updatedAt }: {
         collection: string;
         url: string;
         title: string;
         desc: string;
+        createdAt?: number;
+        updatedAt?: number;
     }): Promise<types.ICollectionLink>;
     getCollectionsOfUrl(url: string): Promise<types.ICollection[]>;
     removeFromCollection(url: string, collection: string): Promise<object>;

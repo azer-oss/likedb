@@ -22,43 +22,69 @@ export default class PushForServers extends Push {
 
     this.store = syncdb.store("pushlogs", {
       key: { autoIncrement: true, keyPath: "id" },
-      indexes: ["id"]
+      indexes: ["id", "store"]
     })
 
     this.scheduler.schedule()
   }
 
-  checkForUpdates() {
-    this.getPushLog((err?: Error, log?: types.IPushLog) => {
-      if (err) {
-        this.scheduler.schedule()
-        return this.onError(err)
+  async checkForUpdates() {
+    const stores = [
+      "bookmarks",
+      "collections",
+      "collection-links",
+      "speed-dial"
+    ]
+
+    let i = stores.length
+    let hasMore = false
+
+    while (i--) {
+      hasMore = await this.checkForStoreUpdates(stores[i])
+      if (hasMore) {
+        break
       }
+    }
 
-      const endpoint: string = "/api/updates/" + (log ? log.until : 0)
+    console.log("has more?", stores[i], hasMore)
+    this.scheduler.schedule(hasMore ? 1 : undefined)
+  }
 
-      this.servers.get(endpoint, (err, updates: types.IAPIUpdates) => {
+  checkForStoreUpdates(store: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.getPushLog(store, (err?: Error, log?: types.IPushLog) => {
         if (err) {
-          this.scheduler.schedule()
-          return this.onError(err)
+          return reject(err)
         }
 
-        if (!updates || !updates.content || updates.content.length === 0)
-          return this.scheduler.schedule()
+        const endpoint: string =
+          "/api/updates/" + store + "/" + (log ? log.until : 0)
 
-        this.sendUpdates(updates, err => {
-          if (err) return this.onError(err)
+        this.servers.get(endpoint, (err, updates: types.IAPIUpdates) => {
+          if (err) {
+            return reject(err)
+          }
 
-          setTimeout(
-            () => this.scheduler.schedule(updates.has_more ? 1 : undefined),
-            0
-          )
+          if (!updates || !updates.content || updates.content.length === 0)
+            return resolve(false)
+
+          console.log("send updates", updates)
+
+          this.sendUpdates(store, updates, err => {
+            if (err) return this.onError(err)
+
+            setTimeout(() => resolve(updates.has_more), 0)
+          })
         })
       })
     })
   }
 
-  sendUpdates(updates: types.IAPIUpdates, callback: idbTypes.ICallback) {
+  sendUpdates(
+    store: string,
+    updates: types.IAPIUpdates,
+    callback: idbTypes.ICallback
+  ) {
     this.publish(updates.content, (errors?: Error[]) => {
       if (errors) return callback(errors[0])
 
@@ -70,27 +96,33 @@ export default class PushForServers extends Push {
         }, 0)
       }
 
-      this.updatePushLog(updates.until, callback)
+      this.updatePushLog(store, updates.until, callback)
     })
   }
 
-  updatePushLog(until: number, callback: idbTypes.ICallback) {
-    this.getPushLog((err?: Error, log?: types.IPushLog) => {
+  updatePushLog(store: string, until: number, callback: idbTypes.ICallback) {
+    console.log("update push log", store, until)
+
+    this.getPushLog(store, (err?: Error, log?: types.IPushLog) => {
       if (!err && log) {
         log.until = until
         return this.store.update(log, callback)
       }
 
-      this.store.add({ until }, callback)
+      this.store.add({ store, until }, callback)
     })
   }
 
-  getPushLog(callback: idbTypes.ICallback) {
-    this.store.all((err?: Error, result?: { value: types.IPushLog }) => {
-      if (err) return callback(err)
-      if (!result) return callback()
-      callback(undefined, result.value)
-    })
+  getPushLog(store: string, callback: idbTypes.ICallback) {
+    this.store.select(
+      "store",
+      { only: store },
+      (err?: Error, result?: { value: types.IPushLog }) => {
+        if (err) return callback(err)
+        if (!result) return callback()
+        callback(undefined, result.value)
+      }
+    )
   }
 
   onError(err: Error) {

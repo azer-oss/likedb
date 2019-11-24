@@ -7,9 +7,10 @@ export default class PushForServers extends Push {
     scheduler: Scheduler;
     store: idbTypes.IStore;
     constructor(servers: Servers, options: types.IAPIOptions);
-    checkForUpdates(): void;
-    sendUpdates(updates: types.IAPIUpdates, callback: idbTypes.ICallback): void;
-    updatePushLog(until: number, callback: idbTypes.ICallback): void;
-    getPushLog(callback: idbTypes.ICallback): void;
+    checkForUpdates(): Promise<void>;
+    checkForStoreUpdates(store: string): Promise<boolean>;
+    sendUpdates(store: string, updates: types.IAPIUpdates, callback: idbTypes.ICallback): void;
+    updatePushLog(store: string, until: number, callback: idbTypes.ICallback): void;
+    getPushLog(store: string, callback: idbTypes.ICallback): void;
     onError(err: Error): void;
 }

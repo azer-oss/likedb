@@ -26,7 +26,7 @@ export interface IBookmarkWithTags {
 export interface IListOptions {
     limit?: number;
     offset?: number;
-    filter: string;
+    filter?: string;
 }
 export interface IDBRow<T> {
     continue: () => void;
@@ -38,6 +38,7 @@ export interface ICallback {
 export interface ICollection {
     title: string;
     desc: string;
+    imageUrl?: string;
     createdAt: number;
     updatedAt: number;
 }
